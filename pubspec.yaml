@@ -39,6 +39,8 @@ dependencies:
   salomon_bottom_bar: ^3.3.1
   google_maps_flutter: ^2.2.3
   location: ^4.4.0
+  geolocator: ^10.1.0
+  supabase_flutter: ^2.5.4
   flutter_polyline_points: ^1.0.0
   flutter_screenutil: ^5.9.3
   badges: ^3.0.2
