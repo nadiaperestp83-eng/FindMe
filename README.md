@@ -1,6 +1,6 @@
 # Quick Step App - Flutter Mobile
 
-Real-time live location tracking app built with Flutter, Google Maps, sockets, and Node.js. This full-stack app comes packed with features that allow you to easily view your current location and other users' real-time live location on Google Maps with custom markers.
+Real-time live location tracking app built with Flutter, Google Maps, Bluetooth, wi-fi, GPS, supabase. This full-stack app comes packed with features that allow you to easily view your current location and other users' real-time live location on Google Maps with custom markers.
 
 In addition to real-time location tracking, this app also includes chat messaging functionality, allowing you to send or receive text messages from your colleagues in real-time. You can register and log in to the app, verify your account by email, and save your travels/trips locally on your phone.
 
