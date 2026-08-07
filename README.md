@@ -140,8 +140,12 @@ flutter pub get
 
 - [Aime Ndayambaje](https://github.com/aimelive)
 
-### Contact Me
+### LICENSE 
 
-- For any ideas, suggestions, improvements, guidance or questions regarding this project, please contact me via my email [aimendayambaje24@gmail.com](mailto:aimendayambaje24@gmail.com) or LinkedIn [Aime Ndayambaje](https://linkedin.com/in/aime-ndayambaje)
-### Note (Edited)
-Currently APK has issues due to backend deployment, I advise you to run the project locally on PC by following the above instructions.
+Em complemento aos termos e condições da Licença Pública Geral GNU (GPLv3), aplicam-se as seguintes restrições adicionais relativas ao uso comercial:
+
+PROIBIÇÃO DE USO COMERCIAL: Fica expressamente proibida a utilização, redistribuição, reempacotamento ou comercialização deste software (no todo ou em partes) para fins lucrativos, comerciais ou monetização direta/indireta (incluindo vendas em lojas de aplicativos com cobrança, inserção de anúncios pagos, ou oferecimento como serviço proprietário pago).
+
+PERMISSÃO NÃO COMERCIAL (NON-COMMERCIAL): O fork, a cópia, a modificação e a redistribuição são totalmente livres e permitidos exclusivamente para fins não comerciais, educacionais, pessoais ou comunitários, desde que mantidos os créditos aos autores originais e que o código modificado permaneça sob esta mesma licença restritiva.
+
+PREVALÊNCIA: Em caso de conflito entre os termos padrão da GPLv3 e esta Cláusula Adicional de Restrição Comercial, prevalecerá sempre a restrição de proibição de uso comercial descrita nos itens 1 e 2 acima.
