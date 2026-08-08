@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:quickstep_app/auth_wrapper.dart';
+import 'package:quickstep_app/core/supabase_config.dart';
 import 'package:quickstep_app/services/hive_service.dart';
 import 'package:quickstep_app/utils/colors.dart';
 import 'package:quickstep_app/utils/theme.dart';
@@ -21,6 +22,11 @@ void main() async {
 
   //Initialising dotenv variables
   await dotenv.load(fileName: "assets/dotenv/.env");
+
+  // Inicializa o Supabase (substitui o backend Node.js/Socket.io).
+  // Precisa rodar depois do dotenv.load, já que lê SUPABASE_URL e
+  // SUPABASE_ANON_KEY do assets/dotenv/.env.
+  await SupabaseConfig.initialize();
 
   //Running flutter application
   runApp(const AppWidget());
