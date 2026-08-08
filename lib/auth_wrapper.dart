@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:quickstep_app/services/auth_service.dart';
 
 import 'controllers/auth.dart';
+import 'core/supabase_config.dart';
 import 'screens/authentication/welcome.dart';
 import 'screens/layout.dart';
 
@@ -16,19 +16,27 @@ class AuthWrapper extends StatefulWidget {
 class _AuthWrapperState extends State<AuthWrapper> {
   final auth = Get.put(AuthState());
 
-  final _hiveDb = AuthService();
-
-  _init() {
-    final account = _hiveDb.getAuth();
-    if (account != null) {
-      auth.isSignedIn.value = true;
-    }
-  }
-
   @override
   void initState() {
-    _init();
     super.initState();
+    _init();
+
+    // Mantém isSignedIn sincronizado se a sessão mudar durante o uso do
+    // app (logout em outro lugar, token expirado, etc).
+    SupabaseConfig.client.auth.onAuthStateChange.listen((data) {
+      auth.isSignedIn.value = data.session != null;
+      auth.email.value = data.session?.user.email ?? "";
+    });
+  }
+
+  // Antes: lia a conta salva no Hive via AuthService().getAuth().
+  // Agora: o supabase_flutter já restaura a sessão sozinho (persistida
+  // localmente) assim que SupabaseConfig.initialize() roda no main.dart
+  // — só precisamos perguntar pra ele se já existe sessão ativa.
+  void _init() {
+    final session = SupabaseConfig.client.auth.currentSession;
+    auth.isSignedIn.value = session != null;
+    auth.email.value = session?.user.email ?? "";
   }
 
   @override
