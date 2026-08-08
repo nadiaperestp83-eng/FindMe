@@ -1,9 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:get/get.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
-import 'package:quickstep_app/controllers/auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:quickstep_app/screens/components/top_snackbar.dart';
 
 import '../../../../services/auth_service.dart';
@@ -14,11 +13,7 @@ import '../widgets/text_input_field.dart';
 enum IsLoading { loading, failed, success, idle }
 
 class CreateAccount extends StatefulWidget {
-  const CreateAccount({
-    Key? key,
-    required this.onContinue,
-  }) : super(key: key);
-  final void Function() onContinue;
+  const CreateAccount({Key? key}) : super(key: key);
 
   @override
   State<CreateAccount> createState() => _CreateAccountState();
@@ -26,7 +21,6 @@ class CreateAccount extends StatefulWidget {
 
 class _CreateAccountState extends State<CreateAccount> {
   final authService = AuthService();
-  final authState = Get.find<AuthState>();
 
   String? fullName;
   String? email;
@@ -38,20 +32,55 @@ class _CreateAccountState extends State<CreateAccount> {
     setState(() {
       _isLoading = IsLoading.loading;
     });
-    final response =
-        await authService.createAccount(fullName!, email!, password!);
-    if (!mounted) return;
-    setState(() {
-      _isLoading = IsLoading.success;
-    });
-    if (response == null) return;
-    authState.email.value = response["data"]["email"];
-    showMessage(
-      message: response["data"]["email"],
-      title: response["message"],
-      type: MessageType.success,
-    );
-    widget.onContinue();
+    try {
+      await authService.createAccount(fullName!, email!, password!);
+      if (!mounted) return;
+      setState(() {
+        _isLoading = IsLoading.success;
+      });
+      showMessage(
+        message: "Conta criada com sucesso. Bem-vindo(a), $fullName!",
+        title: "Conta criada",
+        type: MessageType.success,
+      );
+      // Cadastro em passo único: não existe mais tela de OTP nem de
+      // criar perfil separada (o profile é criado automaticamente pelo
+      // trigger no banco). Como a confirmação de e-mail está desativada
+      // no Supabase, a sessão já fica ativa aqui — só precisamos fechar
+      // as telas de autenticação empilhadas (signup + signin dialog) e
+      // deixar o auth_wrapper.dart trocar para o app sozinho.
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    } on AuthException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = IsLoading.idle;
+      });
+      showMessage(
+        message: _translateAuthError(e.message),
+        title: "Não foi possível criar a conta",
+        type: MessageType.error,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = IsLoading.idle;
+      });
+      onUnkownError(e);
+    }
+  }
+
+  String _translateAuthError(String message) {
+    final lower = message.toLowerCase();
+    if (lower.contains('user already registered')) {
+      return 'Já existe uma conta com este e-mail.';
+    }
+    if (lower.contains('password should be at least')) {
+      return 'A senha precisa ter pelo menos 6 caracteres.';
+    }
+    if (lower.contains('unable to validate email')) {
+      return 'E-mail inválido.';
+    }
+    return message;
   }
 
   @override
@@ -123,13 +152,6 @@ class _CreateAccountState extends State<CreateAccount> {
                               email = value;
                             });
                           },
-                        ),
-                        Text(
-                          " Please note that you will be asked to verify this email",
-                          style: TextStyle(
-                            color: Colors.grey.shade500,
-                            fontSize: 12.sp,
-                          ),
                         ),
                         addVerticalSpace(18),
                         Text(
