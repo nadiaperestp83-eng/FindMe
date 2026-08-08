@@ -1,231 +1,75 @@
-import 'dart:io';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'package:dio/dio.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-import 'package:quickstep_app/screens/components/top_snackbar.dart';
-import 'package:quickstep_app/services/hive_service.dart';
-import 'package:quickstep_app/utils/keys.dart';
-
+import '../core/supabase_config.dart';
 import '../models/account.dart';
 
+/// Antes: falava com o backend Node.js via Dio + cachava a sessão no
+/// Hive. Agora: fala direto com o Supabase Auth, que já persiste e
+/// restaura a sessão sozinho — então os métodos de cache manual
+/// (addAuth/getAuthToken) saíram, e getAuth()/removeAuth() passaram a
+/// consultar a sessão do Supabase.
+///
+/// Como o cadastro virou 1 passo só (sem OTP por e-mail, sem tela de
+/// criar perfil separada — o profile é criado automaticamente pelo
+/// trigger handle_new_user no banco), os métodos resendOTP, verifyOTP,
+/// createProfile e getProfile não existem mais aqui. As telas que os
+/// chamavam (verify_otp.dart, create_profile.dart) serão ajustadas
+/// numa próxima leva de arquivos.
 class AuthService {
-  Box authBox = Hive.box(Boxes.authBox);
-  final dio = Dio();
+  final _client = SupabaseConfig.client;
 
+  /// Retorna a conta da sessão Supabase ativa, ou null se não há login.
   Account? getAuth() {
-    try {
-      final data = authBox.keys.map((key) {
-        final value = authBox.get(key);
-        DateTime expiredAt = value["expiredAt"];
-        if (!expiredAt.isAfter(DateTime.now())) {
-          removeAuth();
-          throw Exception("Token expired");
-        }
-        return Account.fromMap(value["account"]);
-      }).toList();
-      return data.reversed.toList().single;
-    } catch (e) {
-      return null;
-    }
-  }
+    final user = _client.auth.currentUser;
+    if (user == null) return null;
 
-  String? getAuthToken() {
-    try {
-      final data = authBox.keys.map((key) {
-        final value = authBox.get(key);
-        DateTime expiredAt = value["expiredAt"];
-        if (!expiredAt.isAfter(DateTime.now())) {
-          removeAuth();
-          throw Exception("Token expired");
-        }
-        return value["authToken"];
-      }).toList();
-      return data.reversed.toList().single;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  Future<bool> addAuth(String token, Account account) async {
-    try {
-      await authBox.add(
-        {
-          "authToken": token,
-          "expiredAt": DateTime.now().add(const Duration(days: 5)),
-          "account": Account.toMap(account),
-        },
-      );
-      return true;
-    } catch (e) {
-      // print("Sign in failed: ");
-      return false;
-    }
+    final metadata = user.userMetadata ?? {};
+    return Account(
+      userId: user.id,
+      fullName: (metadata['display_name'] as String?) ??
+          (metadata['username'] as String?) ??
+          '',
+      email: user.email ?? '',
+      username: (metadata['username'] as String?) ?? '',
+      profilePic: (metadata['avatar_url'] as String?) ?? '',
+      createdAt: DateTime.tryParse(user.createdAt) ?? DateTime.now(),
+    );
   }
 
   Future<bool> removeAuth() async {
     try {
-      await authBox.clear();
+      await _client.auth.signOut();
       return true;
-    } catch (e) {
+    } catch (_) {
       return false;
     }
   }
 
-  Future<dynamic> createAccount(
-    String fullName,
-    String email,
-    String pwd,
-  ) async {
-    try {
-      final uri = "$backendApiUrl/accounts/create";
-      final result = await dio.post(uri, data: {
-        "fullName": fullName,
-        "email": email,
-        "password": pwd,
-      });
-      return result.data;
-    } on DioError catch (e) {
-      onDioError(e);
-    } catch (e) {
-      onUnkownError(e);
-    }
-  }
-
-  //Login to account
-  Future<dynamic> login(
-    String email,
-    String pwd,
-  ) async {
-    try {
-      print(backendApiUrl);
-      final uri = "$backendApiUrl/accounts/login";
-      final result = await dio.post(uri, data: {
-        "email": email,
-        "password": pwd,
-      });
-      return result.data;
-    } on DioError catch (e) {
-      onDioError(e);
-    } catch (e) {
-      onUnkownError(e);
-    }
-  }
-
-  //Getting user profile informations
-  Future<dynamic> getProfile(String token) async {
-    try {
-      dio.options.headers["Authorization"] = "Bearer $token";
-      final result = await dio.get(
-        "$backendApiUrl/profile",
-      );
-      return result.data;
-    } on DioError catch (e) {
-      onDioError(e);
-    } catch (e) {
-      onUnkownError(e);
-    }
-  }
-
-  Future<dynamic> resendOTP(
-    String email,
-  ) async {
-    try {
-      final uri = "$backendApiUrl/accounts/resend-otp";
-      final result = await dio.post(uri, data: {
-        "email": email,
-      });
-      return result.data;
-    } on DioError catch (e) {
-      onDioError(e);
-    } catch (e) {
-      onUnkownError(e);
-    }
-  }
-
-  Future<dynamic> verifyOTP(String email, int otp) async {
-    try {
-      final uri = "$backendApiUrl/accounts/verify-account";
-      final result = await dio.post(uri, data: {
-        "email": email,
-        "otp": otp,
-      });
-      return result.data;
-    } on DioError catch (e) {
-      onDioError(e);
-    } catch (e) {
-      onUnkownError(e);
-    }
-  }
-
-  Future<dynamic> createProfile(
-      String email, String username, File profilePic, String token) async {
-    try {
-      final formData = FormData.fromMap({
-        'email': email,
-        'username': username,
-        'profilePic': await MultipartFile.fromFile(profilePic.path)
-      });
-      dio.options.headers["Authorization"] = "Bearer $token";
-
-      final response =
-          await dio.post('$backendApiUrl/profile/create', data: formData);
-      return response.data;
-    } on DioError catch (e) {
-      onDioError(e);
-    } catch (e) {
-      onUnkownError(e);
-    }
-  }
-}
-
-void onDioError(DioError e) {
-  if (e.response != null) {
-    final data = e.response?.data;
-    try {
-      showMessage(
-        message: data["message"],
-        title: data["data"] ?? "Something went wrong",
-        type: MessageType.error,
-      );
-    } catch (e) {
-      showMessage(
-        message:
-            "Something went wrong | Unknown error occured, try again later or contact admin",
-        title: "Internal Server Error",
-        type: MessageType.error,
-      );
-    }
-  } else {
-    String msg = e.message ?? "Unkown error";
-    if (DioErrorType.receiveTimeout == e.type ||
-        DioErrorType.sendTimeout == e.type) {
-      msg =
-          "Server is not reachable. Please verify your internet connection and try again";
-    } else
-    // if (e.type != DioErrorType.unknown)
-    {
-      msg = "Problem connecting to the server. Please try again.";
-    }
-    showMessage(
-      message: msg,
-      title: "Something went wrong",
-      type: MessageType.error,
+  /// Login com e-mail e senha. Lança [AuthException] em caso de erro —
+  /// quem chama decide como exibir a mensagem (próxima leva de arquivos
+  /// vai ajustar signin_form.dart para tratar isso).
+  Future<void> login(String email, String password) async {
+    await _client.auth.signInWithPassword(
+      email: email.trim(),
+      password: password,
     );
   }
-}
 
-void onUnkownError(Object e) {
-  showMessage(
-    message: e.toString(),
-    title: "Something went wrong",
-    type: MessageType.error,
-  );
-}
-
-void onSuccess({required String title, required String message}) {
-  showMessage(
-    message: message,
-    title: title,
-    type: MessageType.success,
-  );
+  /// Cadastro em passo único: cria a conta no Supabase Auth já com
+  /// username/display_name no metadata. O profile na tabela `profiles`
+  /// é criado automaticamente pelo trigger handle_new_user (schema.sql).
+  Future<void> createAccount(
+    String fullName,
+    String email,
+    String password,
+  ) async {
+    await _client.auth.signUp(
+      email: email.trim(),
+      password: password,
+      data: {
+        'username': fullName.trim(),
+        'display_name': fullName.trim(),
+      },
+    );
+  }
 }
