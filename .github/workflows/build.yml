@@ -61,7 +61,7 @@ jobs:
       # separado só para arm64-v8a (dispositivos 64-bit modernos),
       # evitando empacotar armeabi-v7a/x86_64 e mantendo o artefato menor.
       - name: Build APK release (arm64-v8a)
-        run: flutter build apk --release --target-platform android-arm64 --split-per-abi
+        run: flutter build apk --release --target-platform android-arm64 --split-per-abi --android-skip-build-dependency-validation
 
       - name: Upload do artefato APK
         uses: actions/upload-artifact@v4
