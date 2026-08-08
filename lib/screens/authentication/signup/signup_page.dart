@@ -1,49 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:quickstep_app/screens/authentication/signup/components/create_profile.dart';
-import 'package:quickstep_app/screens/authentication/signup/components/verify_otp.dart';
 import 'package:quickstep_app/screens/movements/widgets/app_bar_2.dart';
-import 'package:quickstep_app/screens/widgets/slide_fade_switcher.dart';
 
 import '../../../utils/colors.dart';
 import 'components/create_account.dart';
 
-class SignUpPage extends StatefulWidget {
-  const SignUpPage({
-    super.key,
-    this.index = 0,
-  });
-
-  final int index;
-
-  @override
-  State<SignUpPage> createState() => _SignUpPageState();
-}
-
-class _SignUpPageState extends State<SignUpPage> {
-  late List<Widget> steps;
-  late int selectedIndex;
-
-  _init() {
-    selectedIndex = widget.index;
-    steps = [
-      CreateAccount(
-        onContinue: () {
-          setState(() {
-            selectedIndex = 1;
-          });
-        },
-      ),
-      const VerifyOTP(),
-      const CreateProfile()
-    ];
-  }
-
-  @override
-  void initState() {
-    _init();
-    super.initState();
-  }
+/// Antes tinha 3 passos (criar conta -> verificar OTP -> criar perfil).
+/// Com Supabase (confirmação de e-mail desativada + profile criado
+/// automaticamente pelo trigger no banco), os passos 2 e 3 não existem
+/// mais — CreateAccount sozinho fecha o cadastro.
+class SignUpPage extends StatelessWidget {
+  const SignUpPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -71,7 +38,7 @@ class _SignUpPageState extends State<SignUpPage> {
           ),
           body: Padding(
             padding: EdgeInsets.symmetric(horizontal: 18.w),
-            child: SlideFadeSwitcher(child: steps[selectedIndex]),
+            child: const CreateAccount(),
           ),
         ),
       ),
