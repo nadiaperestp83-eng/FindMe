@@ -122,4 +122,52 @@ class CircleRepository {
         .map((r) => (r as Map<String, dynamic>)['user_id'] as String)
         .toList();
   }
+
+  // -------------------------------------------------------------------
+  // Métodos abaixo existem só pra alimentar a UI nova (estilo Find My,
+  // sem tela de "Círculos"). O banco continua com o mesmo modelo de
+  // circles/circle_members — só "achatamos" o resultado aqui, sem
+  // expor o conceito de círculo pra quem usa o app.
+  // -------------------------------------------------------------------
+
+  /// Garante que o usuário tem pelo menos 1 círculo próprio, criando um
+  /// automaticamente (sem o usuário perceber) se ainda não tiver nenhum.
+  /// Usado pelo botão "Convidar pessoa" da tela de Mapa/Pessoas.
+  Future<String> ensureDefaultCircle() async {
+    final myCircles = await listMyCircles();
+    final owned = myCircles.where((c) => c.ownerId == _uid).toList();
+    if (owned.isNotEmpty) {
+      return owned.first.id;
+    }
+    final created = await createCircle('Meu círculo');
+    return created.id;
+  }
+
+  /// Todas as pessoas (perfis) que compartilham comigo, somando membros
+  /// 'accepted' de TODOS os círculos que participo — sem duplicar e sem
+  /// incluir eu mesmo. É a lista que alimenta a gaveta "Pessoas".
+  Future<List<CircleMemberModel>> listAllSharedMembers() async {
+    final circles = await listMyCircles();
+    final Map<String, CircleMemberModel> byUserId = {};
+    for (final circle in circles) {
+      final members = await listMembers(circle.id);
+      for (final member in members) {
+        if (member.userId == _uid) continue;
+        if (member.status != CircleMemberStatus.accepted) continue;
+        byUserId[member.userId] = member;
+      }
+    }
+    return byUserId.values.toList();
+  }
+
+  /// Igual ao acima, mas só os user_ids (incluindo o meu) — pronto pra
+  /// alimentar o snapshot inicial + filtro do realtime na tela de Mapa.
+  Future<List<String>> listAllAcceptedUserIds() async {
+    final circles = await listMyCircles();
+    final Set<String> ids = {_uid};
+    for (final circle in circles) {
+      ids.addAll(await listAcceptedMemberIds(circle.id));
+    }
+    return ids.toList();
+  }
 }
