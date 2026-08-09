@@ -32,6 +32,11 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
+          # Fixado em vez de deixar 'stable' flutuar: já ajustamos Gradle
+          # 8.13 / AGP 8.11.1 / compileSdk 35 pra combinar exatamente com
+          # essa versão. Um "stable" mais novo pode exigir compileSdk 36+
+          # sem aviso nenhum (foi o que quebrou o job de debug).
+          flutter-version: '3.22.2'
           cache: true
 
       - name: Instalar dependências (flutter pub get)
@@ -89,6 +94,11 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
+          # Fixado em vez de deixar 'stable' flutuar: já ajustamos Gradle
+          # 8.13 / AGP 8.11.1 / compileSdk 35 pra combinar exatamente com
+          # essa versão. Um "stable" mais novo pode exigir compileSdk 36+
+          # sem aviso nenhum (foi o que quebrou o job de debug).
+          flutter-version: '3.22.2'
           cache: true
 
       - name: Instalar dependências (flutter pub get)
