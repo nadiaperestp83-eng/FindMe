@@ -291,10 +291,16 @@ class _ChooseLocationDialogState extends State<ChooseLocationDialog> {
                     textDirection: TextDirection.rtl,
                     child: ElevatedButton.icon(
                       onPressed: () {
-                        if (choosenLocation == null) return;
+                        if (currentLocation == null) return;
+                        // Antes: se choosenLocation fosse null (usuário
+                        // não tocou no mapa), o botão simplesmente não
+                        // fazia nada, sem nenhum aviso. Agora, sem toque
+                        // no mapa, usamos a própria localização atual
+                        // como destino também.
+                        final destination = choosenLocation ?? currentLocation!;
                         Map<String, LatLng> points = {
                           "origin": currentLocation!,
-                          "destination": choosenLocation!,
+                          "destination": destination,
                         };
                         Navigator.pop(
                           context,
