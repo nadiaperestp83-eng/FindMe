@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show AuthException;
 import 'package:quickstep_app/controllers/auth.dart';
 import 'package:quickstep_app/screens/authentication/signin/signin_input_field.dart';
 import 'package:quickstep_app/screens/authentication/signup/components/create_account.dart';
