@@ -74,15 +74,21 @@ class _SelfMadeWalkMapState extends State<SelfMadeWalkMap> {
     try {
       PolylinePoints polylinePoints = PolylinePoints();
 
+      // flutter_polyline_points 1.0.0 trocou os argumentos posicionais
+      // por um PolylineRequest nomeado (era: getRouteBetweenCoordinates(
+      // googleApiKey, PointLatLng(...), PointLatLng(...))).
       PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
-        googleApiKey,
-        PointLatLng(
-          origin.latitude,
-          origin.longitude,
-        ),
-        PointLatLng(
-          destination.latitude,
-          destination.longitude,
+        googleApiKey: googleApiKey,
+        request: PolylineRequest(
+          origin: PointLatLng(
+            origin.latitude,
+            origin.longitude,
+          ),
+          destination: PointLatLng(
+            destination.latitude,
+            destination.longitude,
+          ),
+          mode: TravelMode.driving,
         ),
       );
       if (result.points.isNotEmpty) {
