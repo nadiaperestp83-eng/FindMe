@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import 'controllers/auth.dart';
 import 'core/supabase_config.dart';
+import 'app/controllers/circles_controller.dart';
 import 'app/screens/circles/circles_list_screen.dart';
 import 'screens/authentication/welcome.dart';
 
@@ -43,8 +44,21 @@ class _AuthWrapperState extends State<AuthWrapper> {
   Widget build(BuildContext context) {
     return Obx(
       () => auth.isSignedIn.value
-          ? const CirclesListScreen()
+          ? _buildCirclesList()
           : const WelcomeScreen(),
     );
+  }
+
+  Widget _buildCirclesList() {
+    // CirclesListScreen usa GetView<CirclesController>, que exige o
+    // controller já registrado via Get.put/Get.lazyPut ANTES do build.
+    // Isso normalmente acontece sozinho via CirclesBinding quando a
+    // navegação passa pelo GetPage (Get.toNamed), mas o AuthWrapper troca
+    // de tela direto (sem rota nomeada), então o binding nunca rodava —
+    // era exatamente o crash "CirclesController not found" da tela vermelha.
+    if (!Get.isRegistered<CirclesController>()) {
+      Get.put(CirclesController());
+    }
+    return const CirclesListScreen();
   }
 }
