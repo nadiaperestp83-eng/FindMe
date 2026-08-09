@@ -1,6 +1,5 @@
 name: Build Android APK (arm64)
 
-# Roda em todo push e pull request para main e develop.
 on:
   push:
     branches:
@@ -10,7 +9,6 @@ on:
     branches:
       - main
       - develop
-  # Permite disparar manualmente pela aba Actions do GitHub também.
   workflow_dispatch:
 
 jobs:
@@ -31,21 +29,13 @@ jobs:
       - name: Configurar Flutter
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.19.6'
           channel: 'stable'
           cache: true
 
       - name: Instalar dependências (flutter pub get)
         run: flutter pub get
 
-      # ---------------------------------------------------------------
-      # Gera assets/dotenv/.env a partir dos GitHub Secrets, no mesmo
-      # formato que o projeto já espera (README do QuickStep).
-      #
-      # Cadastre em: Settings > Secrets and variables > Actions > New
-      # repository secret, com EXATAMENTE estes nomes:
-      #   SUPABASE_URL
-      #   SUPABASE_ANON_KEY
-      # ---------------------------------------------------------------
       - name: Gerar assets/dotenv/.env a partir dos Secrets
         run: |
           mkdir -p assets/dotenv
@@ -57,11 +47,8 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
 
-      # --target-platform android-arm64 + --split-per-abi gera um APK
-      # separado só para arm64-v8a (dispositivos 64-bit modernos),
-      # evitando empacotar armeabi-v7a/x86_64 e mantendo o artefato menor.
       - name: Build APK release (arm64-v8a)
-        run: flutter build apk --release --target-platform android-arm64 --split-per-abi --android-skip-build-dependency-validation
+        run: flutter build apk --release --target-platform android-arm64 --split-per-abi
 
       - name: Upload do artefato APK
         uses: actions/upload-artifact@v4
