@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:quickstep_app/app/routes/circles_module_routes.dart';
 import 'package:quickstep_app/auth_wrapper.dart';
 import 'package:quickstep_app/core/supabase_config.dart';
 import 'package:quickstep_app/services/hive_service.dart';
@@ -48,6 +49,11 @@ class AppWidget extends StatelessWidget {
           color: primary,
           theme: MyThemes.theme,
           home: child,
+          // Rotas de Círculos/Mapa ao vivo (Get.toNamed usado dentro de
+          // lib/app/screens/circles/... e lib/app/screens/map/...).
+          // AuthWrapper continua controlando login/logout diretamente
+          // por widget, sem rota nomeada — não precisa de authModuleRoutes.
+          getPages: circlesModuleRoutes,
         );
       },
       child: const AuthWrapper(),
