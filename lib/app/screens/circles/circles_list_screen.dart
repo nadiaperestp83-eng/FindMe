@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../../controllers/auth.dart';
+import '../../../services/auth_service.dart';
 import '../../../data/models/circle_models.dart';
 import '../../controllers/circles_controller.dart';
 import '../../routes/circles_module_routes.dart';
@@ -13,7 +15,21 @@ class CirclesListScreen extends GetView<CirclesController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Seus círculos')),
+      appBar: AppBar(
+        title: const Text('Seus círculos'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Sair da conta',
+            onPressed: () async {
+              // Mesmo padrão do resto do app: AuthService fala com o
+              // Supabase, AuthState guarda o estado reativo global.
+              await AuthService().removeAuth();
+              Get.find<AuthState>().isSignedIn.value = false;
+            },
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => showCreateCircleSheet(context),
         child: const Icon(Icons.add),
