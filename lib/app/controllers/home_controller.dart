@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -35,6 +36,11 @@ class HomeController extends GetxController {
   final isInviting = false.obs;
   final errorMessage = RxnString();
 
+  /// Posição do GPS local, sempre buscada ao abrir o mapa — independe
+  /// de "Compartilhar" estar ligado. É o que garante o pino "Você"
+  /// aparecer mesmo se o usuário nunca compartilhou com ninguém.
+  final myPosition = Rxn<Position>();
+
   StreamSubscription<Map<String, UserLocationModel>>? _sub;
   GoogleMapController? _mapController;
 
@@ -44,8 +50,36 @@ class HomeController extends GetxController {
   void onInit() {
     super.onInit();
     isSharingMyLocation.value = _broadcastService.isBroadcasting;
+    _loadMyCurrentPosition();
     _startListening();
     loadPeople();
+  }
+
+  /// Pede permissão e busca a posição atual do GPS, só pra mostrar no
+  /// próprio mapa — isso NÃO envia nada pro Supabase (quem faz isso é
+  /// o LocationBroadcastService, ligado só quando "Compartilhar" está
+  /// ativo). Antes, o pino "Você" só existia depois de compartilhar,
+  /// o que deixava o mapa vazio pra quem nunca tinha apertado o botão.
+  Future<void> _loadMyCurrentPosition() async {
+    try {
+      await _broadcastService.ensurePermissions();
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      myPosition.value = position;
+      _rebuildMarkers();
+      if (_mapController != null) {
+        await _mapController!.animateCamera(
+          CameraUpdate.newLatLngZoom(
+            LatLng(position.latitude, position.longitude),
+            15,
+          ),
+        );
+      }
+    } catch (_) {
+      errorMessage.value =
+          'Não foi possível obter sua localização. Verifique as permissões de GPS.';
+    }
   }
 
   Future<void> _startListening() async {
@@ -74,14 +108,23 @@ class HomeController extends GetxController {
 
   void _onLocationsUpdated(Map<String, UserLocationModel> data) {
     locations.assignAll(data);
-    markers.assignAll(
-      data.values.map((loc) {
-        final isMe = loc.userId == myUserId;
-        final profile = _profileFor(loc.userId);
-        final label = isMe
-            ? 'Você'
-            : (profile?.displayName ?? profile?.username ?? 'Pessoa');
-        return Marker(
+    _rebuildMarkers();
+  }
+
+  void _rebuildMarkers() {
+    final Set<Marker> result = {};
+
+    // Pessoas com localização no Supabase — inclui eu mesmo, SE eu
+    // estiver compartilhando (só nesse caso existe uma linha minha
+    // na tabela locations).
+    for (final loc in locations.values) {
+      final isMe = loc.userId == myUserId;
+      final profile = _profileFor(loc.userId);
+      final label = isMe
+          ? 'Você'
+          : (profile?.displayName ?? profile?.username ?? 'Pessoa');
+      result.add(
+        Marker(
           markerId: MarkerId(loc.userId),
           position: LatLng(loc.lat, loc.lng),
           infoWindow: InfoWindow(
@@ -91,9 +134,28 @@ class HomeController extends GetxController {
           icon: BitmapDescriptor.defaultMarkerWithHue(
             isMe ? BitmapDescriptor.hueAzure : BitmapDescriptor.hueOrange,
           ),
-        );
-      }).toSet(),
-    );
+        ),
+      );
+    }
+
+    // Se eu NÃO estiver compartilhando (sem linha minha no Supabase),
+    // uso a posição do GPS local só pra desenhar meu próprio pino —
+    // ninguém mais recebe isso, é só visual, no meu próprio mapa.
+    if (!locations.containsKey(myUserId) && myPosition.value != null) {
+      final pos = myPosition.value!;
+      result.add(
+        Marker(
+          markerId: const MarkerId('me-local'),
+          position: LatLng(pos.latitude, pos.longitude),
+          infoWindow: const InfoWindow(title: 'Você'),
+          icon: BitmapDescriptor.defaultMarkerWithHue(
+            BitmapDescriptor.hueAzure,
+          ),
+        ),
+      );
+    }
+
+    markers.assignAll(result);
   }
 
   ProfileModel? _profileFor(String userId) {
@@ -166,6 +228,12 @@ class HomeController extends GetxController {
 
   void onMapCreated(GoogleMapController controller) {
     _mapController = controller;
+    final pos = myPosition.value;
+    if (pos != null) {
+      controller.animateCamera(
+        CameraUpdate.newLatLngZoom(LatLng(pos.latitude, pos.longitude), 15),
+      );
+    }
   }
 
   Future<void> focusOn(String userId) async {
