@@ -29,6 +29,45 @@ class RealtimeLocationListenerService {
   Stream<Map<String, UserLocationModel>> get locationsStream =>
       _controller.stream;
 
+  /// Começa a escutar as posições de TODOS os círculos que o usuário
+  /// participa, de uma vez — usado pela tela de Mapa/Pessoas nova (que
+  /// não tem mais conceito de círculo visível na UI). Como a policy de
+  /// RLS já libera exatamente "qualquer círculo em comum", isso bate
+  /// certinho com o que o Postgres nos deixaria ver de qualquer forma.
+  Future<void> listenToAllMyCircles() async {
+    await stop();
+
+    final memberIds = await _circleRepository.listAllAcceptedUserIds();
+    if (memberIds.isEmpty) {
+      _controller.add(const {});
+      return;
+    }
+
+    await _loadInitialSnapshot(memberIds);
+
+    _channel = _client
+        .channel('locations-all-circles')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'locations',
+          callback: _handleChange,
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'locations',
+          callback: _handleChange,
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.delete,
+          schema: 'public',
+          table: 'locations',
+          callback: _handleDelete,
+        )
+        .subscribe();
+  }
+
   /// Começa a escutar as posições dos membros aceitos de [circleId].
   /// 1) Busca o snapshot inicial (posições atuais) via SELECT normal.
   /// 2) Assina o canal Realtime para receber INSERT/UPDATE ao vivo.
