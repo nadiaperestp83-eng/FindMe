@@ -3,8 +3,8 @@ import 'package:get/get.dart';
 
 import 'controllers/auth.dart';
 import 'core/supabase_config.dart';
+import 'app/screens/circles/circles_list_screen.dart';
 import 'screens/authentication/welcome.dart';
-import 'screens/layout.dart';
 
 class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
@@ -42,7 +42,9 @@ class _AuthWrapperState extends State<AuthWrapper> {
   @override
   Widget build(BuildContext context) {
     return Obx(
-      () => auth.isSignedIn.value ? const LayoutPage() : const WelcomeScreen(),
+      () => auth.isSignedIn.value
+          ? const CirclesListScreen()
+          : const WelcomeScreen(),
     );
   }
 }
