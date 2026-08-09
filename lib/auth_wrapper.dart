@@ -3,8 +3,8 @@ import 'package:get/get.dart';
 
 import 'controllers/auth.dart';
 import 'core/supabase_config.dart';
-import 'app/controllers/circles_controller.dart';
-import 'app/screens/circles/circles_list_screen.dart';
+import 'app/controllers/home_controller.dart';
+import 'app/screens/home/home_shell_screen.dart';
 import 'screens/authentication/welcome.dart';
 
 class AuthWrapper extends StatefulWidget {
@@ -43,22 +43,18 @@ class _AuthWrapperState extends State<AuthWrapper> {
   @override
   Widget build(BuildContext context) {
     return Obx(
-      () => auth.isSignedIn.value
-          ? _buildCirclesList()
-          : const WelcomeScreen(),
+      () => auth.isSignedIn.value ? _buildHome() : const WelcomeScreen(),
     );
   }
 
-  Widget _buildCirclesList() {
-    // CirclesListScreen usa GetView<CirclesController>, que exige o
-    // controller já registrado via Get.put/Get.lazyPut ANTES do build.
-    // Isso normalmente acontece sozinho via CirclesBinding quando a
-    // navegação passa pelo GetPage (Get.toNamed), mas o AuthWrapper troca
-    // de tela direto (sem rota nomeada), então o binding nunca rodava —
-    // era exatamente o crash "CirclesController not found" da tela vermelha.
-    if (!Get.isRegistered<CirclesController>()) {
-      Get.put(CirclesController());
+  Widget _buildHome() {
+    // HomeShellScreen usa GetView<HomeController>, que exige o controller
+    // já registrado via Get.put ANTES do build — mesmo motivo do crash
+    // "CirclesController not found" de antes: o AuthWrapper troca de tela
+    // direto, sem passar pelo Binding do GetPage.
+    if (!Get.isRegistered<HomeController>()) {
+      Get.put(HomeController());
     }
-    return const CirclesListScreen();
+    return const HomeShellScreen();
   }
 }
