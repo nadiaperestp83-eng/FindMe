@@ -12,11 +12,6 @@ if (localPropertiesFile.exists()) {
     }
 }
 
-def flutterRoot = localProperties.getProperty('flutter.sdk')
-if (flutterRoot == null) {
-    throw new GradleException("Flutter SDK not found. Define location with flutter.sdk in the local.properties file.")
-}
-
 def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
 if (flutterVersionCode == null) {
     flutterVersionCode = '1'
@@ -29,7 +24,11 @@ if (flutterVersionName == null) {
 
 android {
     namespace "com.example.quickstep_app"
-    compileSdkVersion 34
+    // Subido de 34 pra 35: o image_cropper já pedia isso (warning
+    // anterior), e um recurso v35 de uma lib AndroidX transitiva
+    // (windowOptOutEdgeToEdgeEnforcement, do Android 15) só existe na
+    // platform 35 — com compileSdk 34 o linker não encontra o atributo.
+    compileSdkVersion 35
     ndkVersion "27.0.12077973"
 
     compileOptions {
@@ -41,10 +40,14 @@ android {
         jvmTarget = '1.8'
     }
 
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
+    }
+
     defaultConfig {
         applicationId "com.example.quickstep_app"
         minSdkVersion 21
-        targetSdkVersion 34
+        targetSdkVersion 35
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
     }
