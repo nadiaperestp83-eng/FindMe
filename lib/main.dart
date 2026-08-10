@@ -3,11 +3,11 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:quickstep_app/app/routes/circles_module_routes.dart';
+import 'package:quickstep_app/app/theme/app_theme.dart';
 import 'package:quickstep_app/auth_wrapper.dart';
 import 'package:quickstep_app/core/supabase_config.dart';
 import 'package:quickstep_app/services/hive_service.dart';
 import 'package:quickstep_app/utils/colors.dart';
-import 'package:quickstep_app/utils/theme.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
@@ -47,7 +47,7 @@ class AppWidget extends StatelessWidget {
           debugShowCheckedModeBanner: false,
           title: 'Quick Step Application',
           color: primary,
-          theme: MyThemes.theme,
+          theme: AppTheme.light,
           home: child,
           // Rotas de Círculos/Mapa ao vivo (Get.toNamed usado dentro de
           // lib/app/screens/circles/... e lib/app/screens/map/...).
