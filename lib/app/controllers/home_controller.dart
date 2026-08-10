@@ -12,6 +12,7 @@ import '../../data/models/circle_models.dart';
 import '../../data/models/profile_model.dart';
 import '../../data/models/user_location_model.dart';
 import '../../data/repositories/circle_repository.dart';
+import '../../data/repositories/geofence_repository.dart';
 import '../../data/services/location_broadcast_service.dart';
 import '../../data/services/realtime_location_listener_service.dart';
 
@@ -22,12 +23,15 @@ class HomeController extends GetxController {
   HomeController({
     CircleRepository? circleRepository,
     RealtimeLocationListenerService? realtimeService,
+    GeofenceRepository? geofenceRepository,
   })  : _circleRepository = circleRepository ?? CircleRepository(),
         _realtimeService =
-            realtimeService ?? RealtimeLocationListenerService();
+            realtimeService ?? RealtimeLocationListenerService(),
+        _geofenceRepository = geofenceRepository ?? GeofenceRepository();
 
   final CircleRepository _circleRepository;
   final RealtimeLocationListenerService _realtimeService;
+  final GeofenceRepository _geofenceRepository;
   final _broadcastService = LocationBroadcastService.instance;
 
   final locations = <String, UserLocationModel>{}.obs;
@@ -38,6 +42,14 @@ class HomeController extends GetxController {
   final isLoadingPeople = false.obs;
   final isInviting = false.obs;
   final errorMessage = RxnString();
+
+  /// Alertas de "chegou/saiu" ativos do usuário atual (Notify Me).
+  final alerts = <GeofenceAlertModel>[].obs;
+
+  /// Estado local (em memória) de "dentro do raio" por alerta — só
+  /// existe enquanto o app está aberto, por isso a detecção é
+  /// foreground-only por enquanto.
+  final Map<String, bool> _wasInsideGeofence = {};
 
   /// Posição do GPS local, sempre buscada ao abrir o mapa — independe
   /// de "Compartilhar" estar ligado. É o que garante o pino "Você"
@@ -74,6 +86,16 @@ class HomeController extends GetxController {
     _loadMyCurrentPosition();
     _startListening();
     loadPeople();
+    _loadAlerts();
+  }
+
+  Future<void> _loadAlerts() async {
+    try {
+      final result = await _geofenceRepository.listMyAlerts();
+      alerts.assignAll(result);
+    } catch (_) {
+      // Silencioso: alertas são um extra, não devem travar o mapa.
+    }
   }
 
   /// Pede permissão e busca a posição atual do GPS, só pra mostrar no
@@ -141,6 +163,58 @@ class HomeController extends GetxController {
   void _onLocationsUpdated(Map<String, UserLocationModel> data) {
     locations.assignAll(data);
     _rebuildMarkers();
+    _checkGeofences();
+  }
+
+  /// Compara a posição atual de cada pessoa observada com o ponto salvo
+  /// em cada alerta e dispara quando detecta a transição certa (entrou
+  /// ou saiu do raio). Só roda enquanto o app está aberto — é o que foi
+  /// combinado por enquanto (sem serviço de segundo plano ainda).
+  void _checkGeofences() {
+    for (final alert in alerts) {
+      final loc = locations[alert.targetUserId];
+      if (loc == null) continue;
+
+      final distanceMeters = Geolocator.distanceBetween(
+        alert.lat,
+        alert.lng,
+        loc.lat,
+        loc.lng,
+      );
+      final isInside = distanceMeters <= alert.radiusMeters;
+      final wasInside = _wasInsideGeofence[alert.id];
+      _wasInsideGeofence[alert.id] = isInside;
+
+      // Primeira leitura: só grava o estado inicial, não dispara nada
+      // (evita alerta falso assim que o alerta é criado/carregado).
+      if (wasInside == null) continue;
+
+      final justArrived = !wasInside && isInside;
+      final justLeft = wasInside && !isInside;
+
+      final shouldFire = (alert.trigger == GeofenceTrigger.arrives && justArrived) ||
+          (alert.trigger == GeofenceTrigger.leaves && justLeft);
+
+      if (!shouldFire) continue;
+
+      final personName = labelFor(alert.targetUserId);
+      final verb = alert.trigger == GeofenceTrigger.arrives ? 'chegou em' : 'saiu de';
+      Get.snackbar(
+        'Notify Me',
+        '$personName $verb ${alert.label}',
+        backgroundColor: AppColors.success,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.TOP,
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 6),
+      );
+
+      _geofenceRepository.markTriggered(alert.id);
+      if (alert.frequency == GeofenceFrequency.once) {
+        _geofenceRepository.disable(alert.id);
+        alerts.removeWhere((a) => a.id == alert.id);
+      }
+    }
   }
 
   void _rebuildMarkers() {
@@ -256,6 +330,77 @@ class HomeController extends GetxController {
   Future<void> declineInvite(CircleMemberModel invite) async {
     await _circleRepository.declineInvite(invite.circleId);
     pendingInvites.removeWhere((i) => i.circleId == invite.circleId);
+  }
+
+  /// Cria um alerta de Notify Me. [useMyPosition] decide se o ponto
+  /// observado é a posição atual da PESSOA (useMyPosition: false) ou a
+  /// MINHA posição atual (useMyPosition: true) — mesma escolha que a
+  /// tela "Notify Me" da Apple oferece.
+  Future<bool> createAlert({
+    required String targetUserId,
+    required bool useMyPosition,
+    required GeofenceTrigger trigger,
+    required GeofenceFrequency frequency,
+  }) async {
+    try {
+      double? lat;
+      double? lng;
+      String label;
+
+      if (useMyPosition) {
+        final mine = locations[myUserId] ?? _syntheticMyLocation();
+        if (mine == null) {
+          errorMessage.value = 'Sua posição atual ainda não está disponível.';
+          return false;
+        }
+        lat = mine.lat;
+        lng = mine.lng;
+        label = 'sua posição atual';
+      } else {
+        final theirs = locations[targetUserId];
+        if (theirs == null) {
+          errorMessage.value =
+              'A posição de ${labelFor(targetUserId)} ainda não está disponível.';
+          return false;
+        }
+        lat = theirs.lat;
+        lng = theirs.lng;
+        label = 'a posição atual de ${labelFor(targetUserId)}';
+      }
+
+      await _geofenceRepository.createAlert(
+        targetUserId: targetUserId,
+        label: label,
+        lat: lat,
+        lng: lng,
+        trigger: trigger,
+        frequency: frequency,
+      );
+      await _loadAlerts();
+      return true;
+    } catch (e) {
+      errorMessage.value = 'Não foi possível criar o alerta: ${e.toString()}';
+      return false;
+    }
+  }
+
+  /// Fallback pra "minha posição" quando eu não estou compartilhando
+  /// (sem linha na tabela locations) — usa o GPS local (myPosition).
+  UserLocationModel? _syntheticMyLocation() {
+    final pos = myPosition.value;
+    if (pos == null) return null;
+    return UserLocationModel(
+      userId: myUserId,
+      lat: pos.latitude,
+      lng: pos.longitude,
+      source: 'gps',
+      updatedAt: DateTime.now().toUtc(),
+    );
+  }
+
+  Future<void> deleteAlert(String alertId) async {
+    await _geofenceRepository.deleteAlert(alertId);
+    alerts.removeWhere((a) => a.id == alertId);
   }
 
   void onMapCreated(GoogleMapController controller) {
