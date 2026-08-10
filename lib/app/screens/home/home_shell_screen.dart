@@ -75,7 +75,6 @@ class _MapTab extends GetView<HomeController> {
             initialCameraPosition: _initialCamera,
             onMapCreated: (map) {
               controller.onMapCreated(map);
-              map.setMapStyle(_darkMapStyle);
             },
             markers: controller.markers.toSet(),
             myLocationEnabled: true,
@@ -410,14 +409,3 @@ Future<void> showInvitePersonSheet(BuildContext context) {
     },
   );
 }
-
-const String _darkMapStyle = '''
-[
-  {"elementType": "geometry", "stylers": [{"color": "#0F1626"}]},
-  {"elementType": "labels.text.stroke", "stylers": [{"color": "#0F1626"}]},
-  {"elementType": "labels.text.fill", "stylers": [{"color": "#8A93A8"}]},
-  {"featureType": "road", "elementType": "geometry", "stylers": [{"color": "#1B2438"}]},
-  {"featureType": "water", "elementType": "geometry", "stylers": [{"color": "#12203A"}]},
-  {"featureType": "poi", "stylers": [{"visibility": "off"}]}
-]
-''';
