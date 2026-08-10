@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../controllers/home_controller.dart';
-import '../../../data/repositories/geofence_repository.dart';
-import '../../theme/app_theme.dart';
+import '../../../../data/repositories/geofence_repository.dart';
+import '../../../theme/app_theme.dart';
 
 Future<void> showNotifyMeSheet(
   BuildContext context, {
