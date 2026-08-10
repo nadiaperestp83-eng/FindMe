@@ -1,8 +1,11 @@
 import 'dart:async';
 
+import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+
+import '../theme/app_theme.dart';
 
 import '../../core/supabase_config.dart';
 import '../../data/models/circle_models.dart';
@@ -50,6 +53,24 @@ class HomeController extends GetxController {
   void onInit() {
     super.onInit();
     isSharingMyLocation.value = _broadcastService.isBroadcasting;
+
+    // Antes, erros ficavam só guardados em errorMessage sem nenhum
+    // feedback visual — o usuário via o mapa parado, sem saber por quê.
+    // Agora qualquer erro (permissão negada, GPS indisponível, etc.)
+    // aparece como um snackbar.
+    ever<String?>(errorMessage, (msg) {
+      if (msg == null) return;
+      Get.snackbar(
+        'Algo deu errado',
+        msg,
+        backgroundColor: AppColors.pending,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.BOTTOM,
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 5),
+      );
+    });
+
     _loadMyCurrentPosition();
     _startListening();
     loadPeople();
@@ -63,8 +84,19 @@ class HomeController extends GetxController {
   Future<void> _loadMyCurrentPosition() async {
     try {
       await _broadcastService.ensurePermissions();
+
+      // Fallback rápido: se já tem uma posição conhecida (de antes), usa
+      // ela imediatamente enquanto busca uma nova mais precisa — evita
+      // ficar com o mapa parado enquanto espera o GPS "esquentar".
+      final lastKnown = await Geolocator.getLastKnownPosition();
+      if (lastKnown != null) {
+        myPosition.value = lastKnown;
+        _rebuildMarkers();
+      }
+
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 12),
       );
       myPosition.value = position;
       _rebuildMarkers();
@@ -76,9 +108,9 @@ class HomeController extends GetxController {
           ),
         );
       }
-    } catch (_) {
+    } catch (e) {
       errorMessage.value =
-          'Não foi possível obter sua localização. Verifique as permissões de GPS.';
+          'Não foi possível obter sua localização: ${e.toString()}';
     }
   }
 
