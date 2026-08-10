@@ -6,6 +6,7 @@ import '../../controllers/home_controller.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/pulse_avatar.dart';
 import 'home_shell_screen.dart' show showInvitePersonSheet;
+import 'widgets/notify_me_sheet.dart';
 
 class PeopleTab extends GetView<HomeController> {
   const PeopleTab({super.key});
@@ -177,6 +178,16 @@ class _PersonCard extends GetView<HomeController> {
               ),
               const Icon(Icons.center_focus_strong,
                   size: 18, color: AppColors.textMuted),
+              IconButton(
+                icon: const Icon(Icons.notifications_none,
+                    color: AppColors.textMuted, size: 20),
+                tooltip: 'Notify Me',
+                onPressed: () => showNotifyMeSheet(
+                  context,
+                  targetUserId: member.userId,
+                  targetLabel: name,
+                ),
+              ),
             ],
           ),
         ),
