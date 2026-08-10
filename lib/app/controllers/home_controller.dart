@@ -118,8 +118,8 @@ class HomeController extends GetxController {
     try {
       await _realtimeService.listenToAllMyCircles();
       _sub = _realtimeService.locationsStream.listen(_onLocationsUpdated);
-    } catch (_) {
-      errorMessage.value = 'Não foi possível conectar ao tempo real.';
+    } catch (e) {
+      errorMessage.value = 'Não foi possível conectar ao tempo real: ${e.toString()}';
     }
   }
 
