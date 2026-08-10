@@ -1,33 +1,31 @@
 import 'package:flutter/material.dart';
 
-/// Paleta pensada para um app de rastreamento: fundo "mapa noturno" (o
-/// mapa é o protagonista em qualquer tela, então evitamos branco puro
-/// que teria contraste ruim ao lado do Google Maps em dark mode).
-///
-/// - Teal (#2DD4BF) = sinal ao vivo / membro online / ação positiva
-/// - Coral (#FF6B5B) = pendência / convite / alerta
-/// - Sand (#F5F1E8) = texto primário sobre fundo escuro
+/// Paleta clara, estilo Find My/Apple and Google Maps: fundo quase branco, cards
+/// brancos com borda sutil, azul como accent principal (compartilhar,
+/// ações primárias) e vermelho pra pendência/destrutivo — igual ao
+/// que a Apple usa nas telas de referência.
 class AppColors {
   AppColors._();
 
-  static const background = Color(0xFF0F1626);
-  static const surface = Color(0xFF1B2438);
-  static const surfaceRaised = Color(0xFF232F4A);
-  static const border = Color(0xFF2D3A57);
+  static const background = Color(0xFFF5F6FA);
+  static const surface = Color(0xFFFFFFFF);
+  static const surfaceRaised = Color(0xFFF0F1F5);
+  static const border = Color(0xFFE3E5EC);
 
-  static const textPrimary = Color(0xFFF5F1E8);
-  static const textMuted = Color(0xFF8A93A8);
+  static const textPrimary = Color(0xFF1C1E2A);
+  static const textMuted = Color(0xFF767B8C);
 
-  static const live = Color(0xFF2DD4BF);
-  static const pending = Color(0xFFFF6B5B);
-  static const accentBlue = Color(0xFF5B8DFF);
+  static const live = Color(0xFF0A84FF); // azul iOS — accent principal
+  static const pending = Color(0xFFFF3B30); // vermelho iOS — pendência/perigo
+  static const success = Color(0xFF34C759); // verde iOS — "chegou"
+  static const accentBlue = Color(0xFF0A84FF);
 }
 
 class AppTheme {
   AppTheme._();
 
-  static ThemeData get dark {
-    final base = ThemeData.dark(useMaterial3: true);
+  static ThemeData get light {
+    final base = ThemeData.light(useMaterial3: true);
 
     return base.copyWith(
       scaffoldBackgroundColor: AppColors.background,
@@ -99,7 +97,7 @@ class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.live,
-          foregroundColor: AppColors.background,
+          foregroundColor: Colors.white,
           textStyle: const TextStyle(fontWeight: FontWeight.w700),
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(
@@ -109,9 +107,13 @@ class AppTheme {
       ),
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
         backgroundColor: AppColors.live,
-        foregroundColor: AppColors.background,
+        foregroundColor: Colors.white,
       ),
       dividerTheme: const DividerThemeData(color: AppColors.border, space: 1),
     );
   }
+
+  /// Mantido por compatibilidade com quem ainda referenciar AppTheme.dark
+  /// em algum lugar — aponta pro tema claro agora.
+  static ThemeData get dark => light;
 }
