@@ -361,14 +361,15 @@ Future<void> showInvitePersonSheet(BuildContext context) {
             Text('Convidar pessoa', style: Theme.of(ctx).textTheme.titleLarge),
             const SizedBox(height: 6),
             const Text(
-              'Digite o username de quem você quer ver no mapa.',
+              'Digite o username ou e-mail de quem você quer ver no mapa.',
               style: TextStyle(color: AppColors.textMuted),
             ),
             const SizedBox(height: 20),
             TextField(
               controller: textController,
               autofocus: true,
-              decoration: const InputDecoration(hintText: 'username'),
+              decoration:
+                  const InputDecoration(hintText: 'username ou e-mail'),
               onSubmitted: (_) async {
                 final ok = await controller.invitePerson(textController.text);
                 if (ok && ctx.mounted) Navigator.of(ctx).pop();
