@@ -98,9 +98,14 @@ class CircleRepository {
 
   /// Lista membros de um círculo (com dados de perfil via join).
   Future<List<CircleMemberModel>> listMembers(String circleId) async {
+    // profiles!circle_members_user_id_fkey: circle_members tem DUAS
+    // colunas que apontam pra profiles (user_id e invited_by) — sem
+    // dizer qual usar, o PostgREST rejeita a consulta por ambiguidade.
+    // Aqui queremos o perfil do MEMBRO (user_id).
     final rows = await _client
         .from('circle_members')
-        .select('*, profiles(id, username, display_name, avatar_url)')
+        .select(
+            '*, profiles!circle_members_user_id_fkey(id, username, display_name, avatar_url)')
         .eq('circle_id', circleId);
     return (rows as List)
         .map((r) => CircleMemberModel.fromMap(r as Map<String, dynamic>))
@@ -109,9 +114,12 @@ class CircleRepository {
 
   /// Convites pendentes recebidos pelo usuário atual.
   Future<List<CircleMemberModel>> listMyPendingInvites() async {
+    // Aqui é o oposto do listMembers: queremos o perfil de QUEM CONVIDOU
+    // (invited_by), não o meu próprio perfil (que seria user_id).
     final rows = await _client
         .from('circle_members')
-        .select('*, profiles(id, username, display_name, avatar_url)')
+        .select(
+            '*, profiles!circle_members_invited_by_fkey(id, username, display_name, avatar_url)')
         .eq('user_id', _uid)
         .eq('status', 'pending');
     return (rows as List)
