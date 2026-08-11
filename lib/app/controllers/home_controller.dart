@@ -13,6 +13,7 @@ import '../../data/models/profile_model.dart';
 import '../../data/models/user_location_model.dart';
 import '../../data/repositories/circle_repository.dart';
 import '../../data/repositories/geofence_repository.dart';
+import '../../data/repositories/route_history_repository.dart';
 import '../../data/services/location_broadcast_service.dart';
 import '../../data/services/realtime_location_listener_service.dart';
 
@@ -24,14 +25,18 @@ class HomeController extends GetxController {
     CircleRepository? circleRepository,
     RealtimeLocationListenerService? realtimeService,
     GeofenceRepository? geofenceRepository,
+    RouteHistoryRepository? routeHistoryRepository,
   })  : _circleRepository = circleRepository ?? CircleRepository(),
         _realtimeService =
             realtimeService ?? RealtimeLocationListenerService(),
-        _geofenceRepository = geofenceRepository ?? GeofenceRepository();
+        _geofenceRepository = geofenceRepository ?? GeofenceRepository(),
+        _routeHistoryRepository =
+            routeHistoryRepository ?? RouteHistoryRepository();
 
   final CircleRepository _circleRepository;
   final RealtimeLocationListenerService _realtimeService;
   final GeofenceRepository _geofenceRepository;
+  final RouteHistoryRepository _routeHistoryRepository;
   final _broadcastService = LocationBroadcastService.instance;
 
   final locations = <String, UserLocationModel>{}.obs;
@@ -55,6 +60,15 @@ class HomeController extends GetxController {
   /// de "Compartilhar" estar ligado. É o que garante o pino "Você"
   /// aparecer mesmo se o usuário nunca compartilhou com ninguém.
   final myPosition = Rxn<Position>();
+
+  /// Trajeto percorrido hoje (trilha azul no mapa). Persistido no Hive
+  /// a cada ponto novo — reabrir o app no mesmo dia continua o traçado
+  /// de onde parou.
+  final routePoints = <LatLng>[].obs;
+  final polylines = <Polyline>{}.obs;
+
+  bool _cameraCenteredOnce = false;
+  StreamSubscription<Position>? _positionSub;
 
   StreamSubscription<Map<String, UserLocationModel>>? _sub;
   GoogleMapController? _mapController;
@@ -83,7 +97,7 @@ class HomeController extends GetxController {
       );
     });
 
-    _loadMyCurrentPosition();
+    _startMyPositionStream();
     _startListening();
     loadPeople();
     _loadAlerts();
@@ -98,42 +112,73 @@ class HomeController extends GetxController {
     }
   }
 
-  /// Pede permissão e busca a posição atual do GPS, só pra mostrar no
-  /// próprio mapa — isso NÃO envia nada pro Supabase (quem faz isso é
-  /// o LocationBroadcastService, ligado só quando "Compartilhar" está
-  /// ativo). Antes, o pino "Você" só existia depois de compartilhar,
-  /// o que deixava o mapa vazio pra quem nunca tinha apertado o botão.
-  Future<void> _loadMyCurrentPosition() async {
+  /// Pede permissão e começa a escutar a posição continuamente — antes
+  /// era uma busca única (getCurrentPosition), o que bastava pro pino
+  /// "Você" mas não dava pra desenhar a trilha percorrida. Isso NÃO
+  /// envia nada pro Supabase (quem faz isso é o LocationBroadcastService,
+  /// ligado só quando "Compartilhar" está ativo) — é só local + Hive.
+  Future<void> _startMyPositionStream() async {
     try {
       await _broadcastService.ensurePermissions();
 
-      // Fallback rápido: se já tem uma posição conhecida (de antes), usa
-      // ela imediatamente enquanto busca uma nova mais precisa — evita
-      // ficar com o mapa parado enquanto espera o GPS "esquentar".
+      // Carrega o trajeto de hoje já salvo, se o app foi reaberto no
+      // mesmo dia — o traçado continua de onde parou.
+      routePoints.assignAll(_routeHistoryRepository.loadToday());
+      _rebuildPolylines();
+
+      // Fallback rápido: mostra a última posição conhecida enquanto o
+      // GPS "esquenta" pra dar a primeira leitura precisa.
       final lastKnown = await Geolocator.getLastKnownPosition();
       if (lastKnown != null) {
         myPosition.value = lastKnown;
         _rebuildMarkers();
       }
 
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 12),
+      _positionSub = Geolocator.getPositionStream(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          distanceFilter: 10,
+        ),
+      ).listen(
+        _onMyPositionUpdate,
+        onError: (_) {
+          errorMessage.value = 'Sinal de GPS perdido.';
+        },
       );
-      myPosition.value = position;
-      _rebuildMarkers();
-      if (_mapController != null) {
-        await _mapController!.animateCamera(
-          CameraUpdate.newLatLngZoom(
-            LatLng(position.latitude, position.longitude),
-            15,
-          ),
-        );
-      }
     } catch (e) {
       errorMessage.value =
           'Não foi possível obter sua localização: ${e.toString()}';
     }
+  }
+
+  void _onMyPositionUpdate(Position position) {
+    myPosition.value = position;
+    _rebuildMarkers();
+
+    final point = LatLng(position.latitude, position.longitude);
+    routePoints.add(point);
+    _rebuildPolylines();
+    _routeHistoryRepository.appendPoint(point);
+
+    if (!_cameraCenteredOnce && _mapController != null) {
+      _cameraCenteredOnce = true;
+      _mapController!.animateCamera(CameraUpdate.newLatLngZoom(point, 15));
+    }
+  }
+
+  void _rebuildPolylines() {
+    if (routePoints.length < 2) {
+      polylines.clear();
+      return;
+    }
+    polylines.assignAll({
+      Polyline(
+        polylineId: const PolylineId('my-route-today'),
+        points: routePoints.toList(),
+        color: AppColors.live,
+        width: 4,
+      ),
+    });
   }
 
   Future<void> _startListening() async {
@@ -406,7 +451,8 @@ class HomeController extends GetxController {
   void onMapCreated(GoogleMapController controller) {
     _mapController = controller;
     final pos = myPosition.value;
-    if (pos != null) {
+    if (pos != null && !_cameraCenteredOnce) {
+      _cameraCenteredOnce = true;
       controller.animateCamera(
         CameraUpdate.newLatLngZoom(LatLng(pos.latitude, pos.longitude), 15),
       );
@@ -424,6 +470,7 @@ class HomeController extends GetxController {
   @override
   void onClose() {
     _sub?.cancel();
+    _positionSub?.cancel();
     _realtimeService.dispose();
     super.onClose();
   }
