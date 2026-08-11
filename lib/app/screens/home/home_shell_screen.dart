@@ -73,10 +73,12 @@ class _MapTab extends GetView<HomeController> {
         Obx(
           () => GoogleMap(
             initialCameraPosition: _initialCamera,
+            mapType: MapType.hybrid,
             onMapCreated: (map) {
               controller.onMapCreated(map);
             },
             markers: controller.markers.toSet(),
+            polylines: controller.polylines.toSet(),
             myLocationEnabled: true,
             myLocationButtonEnabled: false,
             zoomControlsEnabled: false,
