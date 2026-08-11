@@ -1,4 +1,4 @@
-# Quick Step App - Flutter Mobile
+# FindMe App - Flutter Mobile 
 
 Real-time live location tracking app built with Flutter, Google Maps, Bluetooth, wi-fi, GPS, supabase. This full-stack app comes packed with features that allow you to easily view your current location and other users' real-time live location on Google Maps with custom markers.
 
@@ -26,11 +26,8 @@ In addition to real-time location tracking, this app also includes chat messagin
 
 Copy this URL (EDITED: Currently APK has issues due to backend deployment)
 
-```bash
-https://drive.google.com/file/d/1uVAM4gpTXExx2GmP78F1Gi7zIEmltBeO/view
-```
 
-Or click [here](https://drive.google.com/file/d/1uVAM4gpTXExx2GmP78F1Gi7zIEmltBeO/view)
+
 
 ### Screenshots
 
