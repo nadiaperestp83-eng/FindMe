@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../theme/app_theme.dart';
 
@@ -69,6 +70,7 @@ class HomeController extends GetxController {
 
   bool _cameraCenteredOnce = false;
   StreamSubscription<Position>? _positionSub;
+  RealtimeChannel? _inviteChannel;
 
   StreamSubscription<Map<String, UserLocationModel>>? _sub;
   GoogleMapController? _mapController;
@@ -101,6 +103,37 @@ class HomeController extends GetxController {
     _startListening();
     loadPeople();
     _loadAlerts();
+    _listenForInviteChanges();
+  }
+
+  /// Escuta mudanças em circle_members que me afetam (novo convite
+  /// recebido, ou alguém aceitando um convite que eu mandei) e recarrega
+  /// a lista de pessoas automaticamente — sem isso, só via pull-to-refresh
+  /// manual dava pra ver um convite novo chegando.
+  void _listenForInviteChanges() {
+    _inviteChannel = SupabaseConfig.client
+        .channel('circle_members-changes')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'circle_members',
+          callback: (payload) => _onCircleMembersChange(payload.newRecord),
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'circle_members',
+          callback: (payload) => _onCircleMembersChange(payload.newRecord),
+        )
+        .subscribe();
+  }
+
+  void _onCircleMembersChange(Map<String, dynamic> record) {
+    final affectedUserId = record['user_id'] as String?;
+    final invitedBy = record['invited_by'] as String?;
+    if (affectedUserId == myUserId || invitedBy == myUserId) {
+      loadPeople();
+    }
   }
 
   Future<void> _loadAlerts() async {
@@ -197,9 +230,12 @@ class HomeController extends GetxController {
       final invites = await _circleRepository.listMyPendingInvites();
       sharedMembers.assignAll(shared);
       pendingInvites.assignAll(invites);
-    } catch (_) {
-      // Silencioso de propósito: a tela de mapa não deve travar por
-      // causa da lista de pessoas falhar em carregar.
+    } catch (e) {
+      // Antes isso era silencioso "de propósito" — mas isso escondeu um
+      // bug real (consulta ambígua no Supabase) por várias rodadas.
+      // Agora qualquer erro aqui aparece, mesmo que a tela de mapa
+      // continue funcionando normalmente.
+      errorMessage.value = 'Não foi possível carregar as pessoas: ${e.toString()}';
     } finally {
       isLoadingPeople.value = false;
     }
@@ -473,6 +509,9 @@ class HomeController extends GetxController {
   void onClose() {
     _sub?.cancel();
     _positionSub?.cancel();
+    if (_inviteChannel != null) {
+      SupabaseConfig.client.removeChannel(_inviteChannel!);
+    }
     _realtimeService.dispose();
     super.onClose();
   }
