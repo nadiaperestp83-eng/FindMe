@@ -40,23 +40,57 @@ class CircleRepository {
 
   /// Convida um usuário pelo username. Só funciona se o usuário atual
   /// for o owner do círculo (garantido pela policy members_insert_owner_invites).
+  /// Convida por username OU e-mail. Aceita "@username" (tira o @
+  /// sozinho) e não diferencia maiúsculas/minúsculas no username.
   Future<void> inviteByUsername({
     required String circleId,
     required String username,
   }) async {
-    final target = await _client
-        .from('profiles')
-        .select('id')
-        .eq('username', username)
-        .maybeSingle();
+    final input = username.trim();
+    if (input.isEmpty) {
+      throw StateError('Digite um username ou e-mail.');
+    }
 
-    if (target == null) {
-      throw StateError('Usuário "$username" não encontrado.');
+    String targetId;
+
+    // "@" no meio do texto (não no começo) = parece e-mail.
+    final looksLikeEmail = input.contains('@') && !input.startsWith('@');
+
+    if (looksLikeEmail) {
+      final result = await _client.rpc(
+        'find_user_id_by_email',
+        params: {'email_input': input},
+      );
+      if (result == null) {
+        throw StateError('Nenhum usuário encontrado com o e-mail "$input".');
+      }
+      targetId = result as String;
+    } else {
+      // Tira o "@" do início se tiver (ex: "@layla" -> "layla") e busca
+      // sem diferenciar maiúsculas/minúsculas.
+      final cleanUsername =
+          input.startsWith('@') ? input.substring(1) : input;
+      if (cleanUsername.isEmpty) {
+        throw StateError('Digite um username válido.');
+      }
+      final target = await _client
+          .from('profiles')
+          .select('id')
+          .ilike('username', cleanUsername)
+          .maybeSingle();
+      if (target == null) {
+        throw StateError('Usuário "$cleanUsername" não encontrado.');
+      }
+      targetId = target['id'] as String;
+    }
+
+    if (targetId == _uid) {
+      throw StateError('Você não pode convidar a si mesmo.');
     }
 
     await _client.from('circle_members').insert({
       'circle_id': circleId,
-      'user_id': target['id'],
+      'user_id': targetId,
       'status': 'pending',
       'invited_by': _uid,
     });
