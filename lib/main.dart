@@ -6,6 +6,7 @@ import 'package:quickstep_app/app/routes/circles_module_routes.dart';
 import 'package:quickstep_app/app/theme/app_theme.dart';
 import 'package:quickstep_app/auth_wrapper.dart';
 import 'package:quickstep_app/core/supabase_config.dart';
+import 'package:quickstep_app/services/background_location_service.dart';
 import 'package:quickstep_app/services/hive_service.dart';
 import 'package:quickstep_app/utils/colors.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -29,6 +30,11 @@ void main() async {
   // Precisa rodar depois do dotenv.load, já que lê SUPABASE_URL e
   // SUPABASE_ANON_KEY do assets/dotenv/.env.
   await SupabaseConfig.initialize();
+
+  // Configura (mas não LIGA) o foreground service de localização em
+  // segundo plano. Só começa a rastrear quando o usuário aperta
+  // "Compartilhar" na tela de Mapa (ver BackgroundLocationService.start()).
+  await BackgroundLocationService.initialize();
 
   //Running flutter application
   runApp(const AppWidget());
