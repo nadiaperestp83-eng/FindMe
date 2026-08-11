@@ -9,6 +9,7 @@ class Boxes {
   static const selfMadeWalksBox = "SELF_MADE_WALKS_BOX";
   static const activitiesBox = "ACTIVITIES_BOX";
   static const authBox = "AUTH_BOX";
+  static const dailyRouteBox = "DAILY_ROUTE_BOX";
 }
 
 class HiveService {
