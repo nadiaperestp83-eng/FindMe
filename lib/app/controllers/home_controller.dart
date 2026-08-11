@@ -358,8 +358,10 @@ class HomeController extends GetxController {
       );
       await loadPeople();
       return true;
-    } catch (_) {
-      errorMessage.value = 'Usuário não encontrado ou já convidado.';
+    } catch (e) {
+      errorMessage.value = e is StateError
+          ? e.message
+          : 'Não foi possível convidar: ${e.toString()}';
       return false;
     } finally {
       isInviting.value = false;
