@@ -70,6 +70,7 @@ class HomeController extends GetxController {
 
   bool _cameraCenteredOnce = false;
   StreamSubscription<Position>? _positionSub;
+  Timer? _routeHeartbeatTimer;
   RealtimeChannel? _inviteChannel;
 
   StreamSubscription<Map<String, UserLocationModel>>? _sub;
@@ -176,6 +177,22 @@ class HomeController extends GetxController {
         _onMyPositionUpdate,
         onError: (_) {
           errorMessage.value = 'Sinal de GPS perdido.';
+        },
+      );
+
+      // O stream acima só dispara quando a posição MUDA (distanceFilter).
+      // Parado no mesmo lugar, nunca chega ponto novo — e sem pontos
+      // novos, a timeline não tem como saber "quanto tempo" você ficou
+      // parado. Esse heartbeat registra um ponto a cada 5 min mesmo sem
+      // movimento, só pra manter a linha do tempo com dado contínuo.
+      _routeHeartbeatTimer = Timer.periodic(
+        const Duration(minutes: 5),
+        (_) {
+          final pos = myPosition.value;
+          if (pos != null) {
+            _routeHistoryRepository
+                .appendPoint(LatLng(pos.latitude, pos.longitude));
+          }
         },
       );
     } catch (e) {
@@ -509,6 +526,7 @@ class HomeController extends GetxController {
   void onClose() {
     _sub?.cancel();
     _positionSub?.cancel();
+    _routeHeartbeatTimer?.cancel();
     if (_inviteChannel != null) {
       SupabaseConfig.client.removeChannel(_inviteChannel!);
     }
