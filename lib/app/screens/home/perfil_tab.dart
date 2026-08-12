@@ -7,6 +7,7 @@ import '../../../services/auth_service.dart';
 import '../../controllers/home_controller.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/pulse_avatar.dart';
+import 'my_timeline_screen.dart';
 
 class PerfilTab extends GetView<HomeController> {
   const PerfilTab({super.key});
@@ -67,6 +68,13 @@ class PerfilTab extends GetView<HomeController> {
               // A gestão em si já vive na aba Pessoas (aceitar/recusar);
               // aqui é só um atalho visual por enquanto.
             },
+          ),
+          _SettingRow(
+            icon: Icons.timeline,
+            label: 'Meu dia',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const MyTimelineScreen()),
+            ),
           ),
           _SettingRow(
             icon: Icons.devices_other_outlined,
