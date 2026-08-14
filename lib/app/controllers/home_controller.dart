@@ -14,9 +14,12 @@ import '../../data/models/profile_model.dart';
 import '../../data/models/user_location_model.dart';
 import '../../data/repositories/circle_repository.dart';
 import '../../data/repositories/geofence_repository.dart';
+import '../../data/repositories/nearby_device_repository.dart';
 import '../../data/repositories/route_history_repository.dart';
 import '../../data/services/location_broadcast_service.dart';
 import '../../data/services/realtime_location_listener_service.dart';
+import '../../services/ble_location_service.dart';
+import '../../services/ble_protocol.dart';
 
 /// Controller único da tela pós-login (estilo Find My). Substitui
 /// CirclesController + CircleDetailController + LiveMapController — não
@@ -27,18 +30,45 @@ class HomeController extends GetxController {
     RealtimeLocationListenerService? realtimeService,
     GeofenceRepository? geofenceRepository,
     RouteHistoryRepository? routeHistoryRepository,
+    NearbyDeviceRepository? nearbyDeviceRepository,
   })  : _circleRepository = circleRepository ?? CircleRepository(),
         _realtimeService =
             realtimeService ?? RealtimeLocationListenerService(),
         _geofenceRepository = geofenceRepository ?? GeofenceRepository(),
         _routeHistoryRepository =
-            routeHistoryRepository ?? RouteHistoryRepository();
+            routeHistoryRepository ?? RouteHistoryRepository(),
+        _nearbyDeviceRepository =
+            nearbyDeviceRepository ?? NearbyDeviceRepository();
 
   final CircleRepository _circleRepository;
   final RealtimeLocationListenerService _realtimeService;
   final GeofenceRepository _geofenceRepository;
   final RouteHistoryRepository _routeHistoryRepository;
+  final NearbyDeviceRepository _nearbyDeviceRepository;
   final _broadcastService = LocationBroadcastService.instance;
+
+  /// BLE de proximidade: só troca dado com quem já está em algum dos
+  /// meus círculos (ver isKnownShortId). getMyPayload sempre pega a
+  /// posição/bateria mais atual na hora de responder uma leitura.
+  late final BleLocationService _bleService = BleLocationService(
+    myUserId: myUserId,
+    getMyPayload: () {
+      final pos = myPosition.value;
+      return BleLocationPayload(
+        userId: myUserId,
+        lat: pos?.latitude ?? 0,
+        lng: pos?.longitude ?? 0,
+        // TODO: integrar leitura real de bateria (ex: pacote
+        // battery_plus) — por agora fica um valor fixo pra não somar
+        // mais uma dependência nova nesta leva já grande de BLE.
+        batteryLevel: 100,
+        timestamp: DateTime.now(),
+      );
+    },
+    isKnownShortId: (shortIdHex) => _knownBleShortIds.contains(shortIdHex),
+  );
+  final Set<String> _knownBleShortIds = {};
+  StreamSubscription<NearbyDevice>? _bleSub;
 
   final locations = <String, UserLocationModel>{}.obs;
   final markers = <Marker>{}.obs;
@@ -105,6 +135,44 @@ class HomeController extends GetxController {
     loadPeople();
     _loadAlerts();
     _listenForInviteChanges();
+
+    // Mostra no mapa quem já foi visto por BLE antes (mesmo offline,
+    // antes de qualquer detecção nova nesta sessão).
+    for (final payload in _nearbyDeviceRepository.getAll().values) {
+      locations[payload.userId] = UserLocationModel(
+        userId: payload.userId,
+        lat: payload.lat,
+        lng: payload.lng,
+        source: 'ble',
+        updatedAt: payload.timestamp,
+      );
+    }
+    _rebuildMarkers();
+
+    _bleSub = _bleService.nearbyStream.listen(_onNearbyBleDevice);
+  }
+
+  /// Chamado quando o BLE detecta e confirma alguém do círculo por
+  /// perto. Salva no Hive (funciona offline) e só atualiza o mapa se
+  /// esse dado for mais novo que o que já tínhamos (ex: vindo do
+  /// Supabase Realtime, quando há internet).
+  void _onNearbyBleDevice(NearbyDevice device) async {
+    final payload = device.payload;
+    if (payload == null) return;
+
+    await _nearbyDeviceRepository.save(payload);
+
+    final existing = locations[payload.userId];
+    if (existing == null || payload.timestamp.isAfter(existing.updatedAt)) {
+      locations[payload.userId] = UserLocationModel(
+        userId: payload.userId,
+        lat: payload.lat,
+        lng: payload.lng,
+        source: 'ble',
+        updatedAt: payload.timestamp,
+      );
+      _rebuildMarkers();
+    }
   }
 
   /// Escuta mudanças em circle_members que me afetam (novo convite
@@ -247,6 +315,12 @@ class HomeController extends GetxController {
       final invites = await _circleRepository.listMyPendingInvites();
       sharedMembers.assignAll(shared);
       pendingInvites.assignAll(invites);
+
+      // O BLE só reconhece/lê localização de quem está nessa lista —
+      // recalcula sempre que ela mudar (novo membro aceito, etc.).
+      _knownBleShortIds
+        ..clear()
+        ..addAll(shared.map((m) => BleProtocol.shortIdHex(m.userId)));
     } catch (e) {
       // Antes isso era silencioso "de propósito" — mas isso escondeu um
       // bug real (consulta ambígua no Supabase) por várias rodadas.
@@ -386,9 +460,19 @@ class HomeController extends GetxController {
     try {
       if (isSharingMyLocation.value) {
         await _broadcastService.stop();
+        await _bleService.stop();
         isSharingMyLocation.value = false;
       } else {
         await _broadcastService.start();
+
+        // BLE é tratado como um extra: se a permissão for negada ou o
+        // Bluetooth do aparelho não ligar, o compartilhamento normal
+        // (GPS + Supabase) continua funcionando de qualquer forma.
+        final bleOk = await _bleService.ensurePermissions();
+        if (bleOk) {
+          await _bleService.start();
+        }
+
         isSharingMyLocation.value = true;
       }
     } catch (e) {
@@ -527,6 +611,8 @@ class HomeController extends GetxController {
     _sub?.cancel();
     _positionSub?.cancel();
     _routeHeartbeatTimer?.cancel();
+    _bleSub?.cancel();
+    _bleService.dispose();
     if (_inviteChannel != null) {
       SupabaseConfig.client.removeChannel(_inviteChannel!);
     }
