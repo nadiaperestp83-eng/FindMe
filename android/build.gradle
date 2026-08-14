@@ -6,13 +6,17 @@ allprojects {
 }
 
 rootProject.buildDir = '../build'
-
 subprojects {
     project.buildDir = "${rootProject.buildDir}/${project.name}"
     project.evaluationDependsOn(':app')
-    
-    // === WORKAROUND: injeta namespace em plugins legados sem namespace (AGP 8.x) ===
-    afterEvaluate { project ->
+}
+
+// === WORKAROUND: injeta namespace em plugins legados sem namespace (AGP 8.x) ===
+// Usa gradle.projectsEvaluated porque no formato moderno do Flutter
+// (flutter-plugin-loader no settings.gradle) os subprojetos já são
+// avaliados antes do build.gradle raiz ser processado.
+gradle.projectsEvaluated {
+    rootProject.subprojects { project ->
         if (project.hasProperty("android")) {
             project.android {
                 if (namespace == null || namespace.isEmpty()) {
