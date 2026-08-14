@@ -13,6 +13,31 @@ subprojects {
     project.evaluationDependsOn(':app')
 }
 
+// === WORKAROUND: injeta namespace em plugins legados sem namespace (AGP 8.x) ===
+subprojects {
+    afterEvaluate { project ->
+        if (project.hasProperty("android")) {
+            project.android {
+                if (namespace == null || namespace.isEmpty()) {
+                    // Tenta extrair do AndroidManifest.xml do plugin
+                    def manifestFile = project.file("src/main/AndroidManifest.xml")
+                    if (manifestFile.exists()) {
+                        def manifestText = manifestFile.text
+                        def matcher = manifestText =~ /package="([^"]+)"/
+                        if (matcher.find()) {
+                            namespace = matcher.group(1)
+                        }
+                    }
+                    // Fallback: usa o group do projeto
+                    if (namespace == null || namespace.isEmpty()) {
+                        namespace = project.group ?: project.name
+                    }
+                }
+            }
+        }
+    }
+}
+
 tasks.register("clean", Delete) {
     delete rootProject.buildDir
 }
