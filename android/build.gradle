@@ -1,10 +1,3 @@
-ext.flutter = [
-    compileSdkVersion: 35,
-    minSdkVersion    : 24,
-    targetSdkVersion : 35,
-    ndkVersion       : "27.0.12077973"
-]
-
 allprojects {
     repositories {
         google()
@@ -14,10 +7,6 @@ allprojects {
 
 rootProject.buildDir = '../build'
 subprojects {
-    // INJEÇÃO: copia a propriedade flutter para cada subprojeto
-    // Plugins do pub.dev esperam encontrar flutter.compileSdkVersion
-    ext.flutter = rootProject.ext.flutter
-    
     project.buildDir = "${rootProject.buildDir}/${project.name}"
 }
 subprojects {
