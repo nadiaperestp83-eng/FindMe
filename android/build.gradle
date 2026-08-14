@@ -14,6 +14,10 @@ allprojects {
 
 rootProject.buildDir = '../build'
 subprojects {
+    // INJEÇÃO: copia a propriedade flutter para cada subprojeto
+    // Plugins do pub.dev esperam encontrar flutter.compileSdkVersion
+    ext.flutter = rootProject.ext.flutter
+    
     project.buildDir = "${rootProject.buildDir}/${project.name}"
 }
 subprojects {
