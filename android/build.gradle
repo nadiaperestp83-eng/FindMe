@@ -6,15 +6,12 @@ allprojects {
 }
 
 rootProject.buildDir = '../build'
+
 subprojects {
     project.buildDir = "${rootProject.buildDir}/${project.name}"
-}
-subprojects {
     project.evaluationDependsOn(':app')
-}
-
-// === WORKAROUND: injeta namespace em plugins legados sem namespace (AGP 8.x) ===
-subprojects {
+    
+    // === WORKAROUND: injeta namespace em plugins legados sem namespace (AGP 8.x) ===
     afterEvaluate { project ->
         if (project.hasProperty("android")) {
             project.android {
