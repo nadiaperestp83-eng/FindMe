@@ -23,9 +23,16 @@ class BleProtocol {
   /// Identifica "isso é um FindMe" pros scanners saberem filtrar.
   static const String serviceUuid = 'd4a7b3e0-0001-4f6e-8f2a-0123456789ab';
 
-  /// Characteristic usada pra trocar o payload completo após conectar.
-  static const String locationCharacteristicUuid =
+  /// Characteristic de identidade: só o ID curto (4 bytes) — lida
+  /// primeiro, pra decidir se vale a pena ler a localização completa.
+  static const String identityCharacteristicUuid =
       'd4a7b3e0-0002-4f6e-8f2a-0123456789ab';
+
+  /// Characteristic usada pra trocar o payload completo, só lida
+  /// depois de confirmar (via identityCharacteristicUuid) que é
+  /// alguém do círculo.
+  static const String locationCharacteristicUuid =
+      'd4a7b3e0-0003-4f6e-8f2a-0123456789ab';
 
   /// Deriva um ID curto (4 bytes) e determinístico a partir do user_id
   /// completo (uuid do Supabase) — é o que vai no advertisement, já que
