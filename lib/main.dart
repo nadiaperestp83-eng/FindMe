@@ -21,6 +21,7 @@ void main() async {
     Hive.openBox(Boxes.activitiesBox),
     Hive.openBox(Boxes.authBox),
     Hive.openBox(Boxes.dailyRouteBox),
+    Hive.openBox(Boxes.nearbyDevicesBox),
   ]);
 
   //Initialising dotenv variables
