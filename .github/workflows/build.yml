@@ -39,6 +39,9 @@ jobs:
           flutter-version: '3.22.2'
           cache: true
 
+      - name: Limpar cache do pub para evitar versões antigas presas
+        run: flutter pub cache clean -f
+
       - name: Instalar dependências (flutter pub get)
         run: flutter pub get
 
@@ -100,6 +103,9 @@ jobs:
           # sem aviso nenhum (foi o que quebrou o job de debug).
           flutter-version: '3.22.2'
           cache: true
+
+      - name: Limpar cache do pub para evitar versões antigas presas
+        run: flutter pub cache clean -f
 
       - name: Instalar dependências (flutter pub get)
         run: flutter pub get
