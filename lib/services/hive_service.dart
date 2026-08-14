@@ -10,6 +10,7 @@ class Boxes {
   static const activitiesBox = "ACTIVITIES_BOX";
   static const authBox = "AUTH_BOX";
   static const dailyRouteBox = "DAILY_ROUTE_BOX";
+  static const nearbyDevicesBox = "NEARBY_DEVICES_BOX";
 }
 
 class HiveService {
