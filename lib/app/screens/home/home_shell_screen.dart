@@ -1,7 +1,9 @@
+import 'package:app_settings/app_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import '../../controllers/connectivity_guard_controller.dart';
 import '../../controllers/home_controller.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/pulse_avatar.dart';
@@ -68,6 +70,11 @@ class _MapTab extends GetView<HomeController> {
 
   @override
   Widget build(BuildContext context) {
+    if (!Get.isRegistered<ConnectivityGuardController>()) {
+      Get.put(ConnectivityGuardController());
+    }
+    final guard = Get.find<ConnectivityGuardController>();
+
     return Stack(
       children: [
         Obx(
@@ -87,23 +94,37 @@ class _MapTab extends GetView<HomeController> {
         SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text(
-                  'FindMe',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'FindMe',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    Obx(
+                      () => _ShareToggleButton(
+                        isSharing: controller.isSharingMyLocation.value,
+                        onTap: controller.toggleMyLocationSharing,
+                      ),
+                    ),
+                  ],
                 ),
-                Obx(
-                  () => _ShareToggleButton(
-                    isSharing: controller.isSharingMyLocation.value,
-                    onTap: controller.toggleMyLocationSharing,
-                  ),
-                ),
+                Obx(() {
+                  if (!guard.showOfflineProximityBanner) {
+                    return const SizedBox.shrink();
+                  }
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: _OfflineProximityBanner(guard: guard),
+                  );
+                }),
               ],
             ),
           ),
@@ -117,6 +138,60 @@ class _MapTab extends GetView<HomeController> {
               : _PeopleSheet(controller: controller);
         }),
       ],
+    );
+  }
+}
+
+/// Banner "Apple-like": aparece quando não tem internet E o GPS está
+/// desativado (é aí que o BLE de proximidade não tem chance nenhuma de
+/// funcionar). Tocar abre o popup nativo de 1 toque pra ligar o GPS —
+/// pra internet, que não tem popup de 1 toque no Android, mostra um
+/// atalho de texto pra tela de configurações de rede.
+class _OfflineProximityBanner extends StatelessWidget {
+  const _OfflineProximityBanner({required this.guard});
+  final ConnectivityGuardController guard;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.pending,
+      borderRadius: BorderRadius.circular(14),
+      elevation: 4,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: guard.requestEnableLocation,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              const Icon(Icons.location_off, color: Colors.white, size: 20),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Text(
+                  'Sem conexão e localização desativada. Toque para '
+                  'habilitar o modo de proximidade.',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: () => AppSettings.openWIFISettings(),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                ),
+                child: const Text(
+                  'Rede',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
