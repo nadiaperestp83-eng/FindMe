@@ -74,7 +74,7 @@ dependencies:
   # 4.3.1 de propósito (API antiga, mais simples e documentada — a 7.x
   # mudou pra um parâmetro "type:" que eu não tenho como confirmar
   # ao vivo com a mesma segurança).
-  app_settings: ^4.3.1
+  app_settings: ^5.0.0
   supabase_flutter: ^2.5.4
   flutter_polyline_points: ^1.0.0
   flutter_screenutil: ^5.9.3
