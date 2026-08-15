@@ -53,7 +53,7 @@ dependencies:
   # bibliotecas juntas. Versões confirmadas no pub.dev (não são mais
   # chute de memória). Nenhuma delas é usada no código ainda, é só a
   # dependência por enquanto (passo 1 de 6).
-  flutter_blue_plus: ^1.32.0
+  flutter_blue_plus: ^1.32.1
   # ble_peripheral (não flutter_ble_peripheral) — confirmado via pub.dev
   # que só esse tem servidor GATT de verdade (addService +
   # setReadRequestCallback). flutter_ble_peripheral só faz advertisement
