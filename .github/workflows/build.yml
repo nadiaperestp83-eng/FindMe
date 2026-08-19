@@ -32,11 +32,8 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          # Fixado em vez de deixar 'stable' flutuar: já ajustamos Gradle
-          # 8.13 / AGP 8.11.1 / compileSdk 35 pra combinar exatamente com
-          # essa versão. Um "stable" mais novo pode exigir compileSdk 36+
-          # sem aviso nenhum (foi o que quebrou o job de debug).
-          flutter-version: '3.22.2'
+          # Atualizado para 'latest' para garantir compatibilidade total com os plugins modernos de BLE
+          flutter-version: 'latest'
           cache: true
 
       - name: Limpar cache do pub para evitar versões antigas presas
@@ -45,15 +42,6 @@ jobs:
       - name: Instalar dependências (flutter pub get)
         run: flutter pub get
 
-      # ---------------------------------------------------------------
-      # Gera assets/dotenv/.env a partir dos GitHub Secrets, no mesmo
-      # formato que o projeto já espera (README do QuickStep).
-      #
-      # Cadastre em: Settings > Secrets and variables > Actions > New
-      # repository secret, com EXATAMENTE estes nomes:
-      #   SUPABASE_URL
-      #   SUPABASE_ANON_KEY
-      # ---------------------------------------------------------------
       - name: Gerar assets/dotenv/.env a partir dos Secrets
         run: |
           mkdir -p assets/dotenv
@@ -65,9 +53,6 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
 
-      # --target-platform android-arm64 + --split-per-abi gera um APK
-      # separado só para arm64-v8a (dispositivos 64-bit modernos),
-      # evitando empacotar armeabi-v7a/x86_64 e mantendo o artefato menor.
       - name: Build APK release (arm64-v8a)
         run: flutter build apk --release --target-platform android-arm64 --split-per-abi
 
@@ -97,11 +82,8 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          # Fixado em vez de deixar 'stable' flutuar: já ajustamos Gradle
-          # 8.13 / AGP 8.11.1 / compileSdk 35 pra combinar exatamente com
-          # essa versão. Um "stable" mais novo pode exigir compileSdk 36+
-          # sem aviso nenhum (foi o que quebrou o job de debug).
-          flutter-version: '3.22.2'
+          # Atualizado para 'latest' para compilar o subprojeto Android moderno sem erros
+          flutter-version: 'latest'
           cache: true
 
       - name: Limpar cache do pub para evitar versões antigas presas
@@ -121,11 +103,6 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
 
-      # Build DEBUG: se algum widget quebrar durante o build(), o app
-      # mostra a tela vermelha do Flutter com a exceção e o stack trace
-      # DIRETO NA TELA DO CELULAR — não precisa de cabo, adb ou terminal.
-      # Só pra diagnosticar; não é o APK pra usar no dia a dia (é maior,
-      # mais lento e sem otimizações do release).
       - name: Build APK debug (arm64-v8a)
         run: flutter build apk --debug --target-platform android-arm64
 
