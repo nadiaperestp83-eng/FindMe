@@ -1,161 +1,61 @@
 name: quickstep_app
 description: A new Flutter project.
 
-# The following line prevents the package from being accidentally published to
-# pub.dev using `flutter pub publish`. This is preferred for private packages.
-publish_to: "none" # Remove this line if you wish to publish to pub.dev
+publish_to: "none"
 
-# The following defines the version and build number for your application.
-# A version number is three numbers separated by dots, like 1.2.43
-# followed by an optional build number separated by a +.
-# Both the version and the builder number may be overridden in flutter
-# build by specifying --build-name and --build-number, respectively.
-# In Android, build-name is used as versionName while build-number used as versionCode.
-# Read more about Android versioning at https://developer.android.com/studio/publish/versioning
-# In iOS, build-name is used as CFBundleShortVersionString while build-number is used as CFBundleVersion.
-# Read more about iOS versioning at
-# https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
-# In Windows, build-name is used as the major, minor, and patch parts
-# of the product and file versions while build-number is used as the build suffix.
 version: 1.0.0+1
 
 environment:
-  sdk: ">=2.18.6 <3.24.5"
+  sdk: ">=3.2.0 <4.0.0"
 
-# Dependencies specify other packages that your package needs in order to work.
-# To automatically upgrade your package dependencies to the latest versions
-# consider running `flutter pub upgrade --major-versions`. Alternatively,
-# dependencies can be manually updated by changing the version numbers below to
-# the latest version available on pub.dev. To see which dependencies have newer
-# versions available, run `flutter pub outdated`.
 dependencies:
   flutter:
     sdk: flutter
 
-  # The following adds the Cupertino Icons font to your application.
-  # Use with the CupertinoIcons class for iOS style icons.
-  cupertino_icons: ^1.0.2
-  flutter_svg: ^1.1.6
+  cupertino_icons: ^1.0.8
+  flutter_svg: ^2.0.10+1
   salomon_bottom_bar: ^3.3.1
-  google_maps_flutter: ^2.2.3
-  location: ^4.4.0
-  geolocator: ^10.1.0
-  # Foreground service pra manter o compartilhamento de localização
-  # rodando mesmo com o app fechado/minimizado (Etapa 2 combinada).
-  # Só a dependência por enquanto, ainda não é usada em lugar nenhum
-  # do código — é o passo 1 de 5, pra testar o build sozinho primeiro.
-  flutter_background_service: ^5.0.5
-  # BLE de proximidade: flutter_blue_plus faz o papel de Central
-  # (escanear/ler outros FindMe por perto); flutter_ble_peripheral faz
-  # o papel de Periférico (anunciar este aparelho pros outros vererem).
-  # flutter_blue_plus sozinho NÃO consegue anunciar (é só central, isso
-  # é documentado pelos próprios mantenedores) — por isso as duas
-  # bibliotecas juntas. Versões confirmadas no pub.dev (não são mais
-  # chute de memória). Nenhuma delas é usada no código ainda, é só a
-  # dependência por enquanto (passo 1 de 6).
-  flutter_blue_plus: ^1.32.1
-  # ble_peripheral (não flutter_ble_peripheral) — confirmado via pub.dev
-  # que só esse tem servidor GATT de verdade (addService +
-  # setReadRequestCallback). flutter_ble_peripheral só faz advertisement
-  # puro, sem characteristic hospedada — não serviria pro que precisamos
-  # (ler o payload completo depois de conectar).
-  ble_peripheral: ^2.4.0
-  # Pede permissão de BLE em runtime (o manifest só declara, quem pede
-  # de verdade é esse pacote). Versão 11.3.1 de propósito — versões
-  # 12+/13+ exigem Dart SDK 3.5/3.6+, que o Flutter 3.22.2 fixado no
-  # workflow provavelmente não tem (risco de version solving falhar).
+  google_maps_flutter: ^2.6.0
+  location: ^5.0.3
+  geolocator: ^11.0.0
+  flutter_background_service: ^5.0.6
+  
+  # BLE atualizado para evitar falhas de compilação no Android Gradle Plugin
+  flutter_blue_plus: ^1.34.5
+  ble_peripheral: ^2.5.0
+  
   permission_handler: ^11.3.1
-  # Detecta se tem internet (Wi-Fi/dados) — usado pelo banner de "modo
-  # de proximidade". Versão 6.x confirmada: só exige Dart 3.2, sem risco
-  # de version solving com o Flutter 3.22.2 fixado no workflow.
-  connectivity_plus: ^6.1.5
-  # Abre a tela de configurações de rede/localização/bluetooth do
-  # Android quando não dá pra resolver com popup de 1 toque. Versão
-  # 4.3.1 de propósito (API antiga, mais simples e documentada — a 7.x
-  # mudou pra um parâmetro "type:" que eu não tenho como confirmar
-  # ao vivo com a mesma segurança).
-  app_settings: ^5.0.0
+  connectivity_plus: ^6.0.3
+  app_settings: ^5.1.1
   supabase_flutter: ^2.5.4
-  flutter_polyline_points: ^1.0.0
+  flutter_polyline_points: ^2.0.0
   flutter_screenutil: ^5.9.3
-  badges: ^3.0.2
+  badges: ^3.1.2
   hive: ^2.2.3
   hive_flutter: ^1.1.0
-  timeago: ^3.4.0
-  image_picker: ^0.8.6+3
-  image_cropper: ^3.0.1
-  get: ^4.6.5
-  socket_io_client: ^2.0.1
-  dio: ^5.0.1
+  timeago: ^3.6.1
+  image_picker: ^1.0.7
+  image_cropper: ^5.0.1
+  get: ^4.6.6
+  socket_io_client: ^3.0.0
+  dio: ^5.4.3+1
   loading_animation_widget: ^1.2.0+4
-  flutter_dotenv: ^5.0.2
-  screenshot: ^2.5.0
+  flutter_dotenv: ^5.1.0
+  screenshot: ^3.0.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_lints: ^3.0.0
+  flutter_native_splash: ^2.4.0
 
-  # The "flutter_lints" package below contains a set of recommended lints to
-  # encourage good coding practices. The lint set provided by the package is
-  # activated in the `analysis_options.yaml` file located at the root of your
-  # package. See that file for information about deactivating specific lint
-  # rules and activating additional ones.
-  flutter_lints: ^2.0.0
-  flutter_native_splash: ^2.2.17
-
-# flutter_plugin_android_lifecycle é dependência transitiva (puxada por
-# geolocator/location/image_picker/google_maps_flutter). A versão que o
-# pub resolveu (2.0.7) não declara "namespace" no build.gradle dela, e o
-# AGP 8.x que subimos em android/settings.gradle exige isso de toda
-# dependência. Versões mais novas do pacote já têm o namespace corrigido
-# — forçamos uma aqui sem precisar esperar os pacotes que a puxam
-# atualizarem a constraint deles.
-#
-# Aviso: não consegui verificar ao vivo no pub.dev qual é a última
-# versão exata agora (sem acesso à internet neste momento). Se o
-# `flutter pub get` reclamar que essa versão não existe, me manda o erro
-# que eu ajusto o número.
 dependency_overrides:
   flutter_plugin_android_lifecycle: ^2.0.17
 
-# For information on the generic Dart part of this file, see the
-# following page: https://dart.dev/tools/pub/pubspec
-
-# The following section is specific to Flutter packages.
 flutter:
-  # The following line ensures that the Material Icons font is
-  # included with your application, so that you can use the icons in
-  # the material Icons class.
   uses-material-design: true
 
-  # To add assets to your application, add an assets section, like this:
   assets:
     - assets/icons/
     - assets/images/
     - assets/dotenv/
-
-  # An image asset can refer to one or more resolution-specific "variants", see
-  # https://flutter.dev/assets-and-images/#resolution-aware
-
-  # For details regarding adding assets from package dependencies, see
-  # https://flutter.dev/assets-and-images/#from-packages
-
-  # To add custom fonts to your application, add a fonts section here,
-  # in this "flutter" section. Each entry in this list should have a
-  # "family" key with the font family name, and a "fonts" key with a
-  # list giving the asset and other descriptors for the font. For
-  # example:
-  # fonts:
-  #   - family: Schyler
-  #     fonts:
-  #       - asset: fonts/Schyler-Regular.ttf
-  #       - asset: fonts/Schyler-Italic.ttf
-  #         style: italic
-  #   - family: Trajan Pro
-  #     fonts:
-  #       - asset: fonts/TrajanPro.ttf
-  #       - asset: fonts/TrajanPro_Bold.ttf
-  #         weight: 700
-  #
-  # For details regarding fonts from package dependencies,
-  # see https://flutter.dev/custom-fonts/#from-packages
